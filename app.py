@@ -5,21 +5,22 @@ from datetime import datetime
 # Title
 st.title("NBA Player Projection & Betting Tool")
 
-# Function to Fetch NBA Player Names from a Public API
+# Function to Fetch NBA Player Names from an Alternative API or Static List
 @st.cache_data
 def get_nba_players():
-    url = "https://www.balldontlie.io/api/v1/players?per_page=100&page=1"
-    players = []
-    while url:
+    try:
+        url = "https://data.nba.net/data/10s/prod/v1/2024/players.json"
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
-            players.extend([f"{player['first_name']} {player['last_name']}" for player in data["data"]])
-            url = data.get("meta", {}).get("next_page", None)
+            players = [f"{player['firstName']} {player['lastName']}" for player in data["league"]["standard"]]
+            return players
         else:
             st.error(f"Error fetching players: {response.status_code}")
-            return []
-    return players
+            return ["LeBron James", "Stephen Curry", "Kevin Durant", "Giannis Antetokounmpo", "Luka Doncic", "Nikola Jokic"]
+    except Exception as e:
+        st.error(f"Failed to fetch players: {e}")
+        return ["LeBron James", "Stephen Curry", "Kevin Durant", "Giannis Antetokounmpo", "Luka Doncic", "Nikola Jokic"]
 
 # Fetch Player List
 dynamic_nba_players = get_nba_players()
@@ -40,20 +41,24 @@ odds_pts = st.number_input("Over/Under Points", value=25.5)
 odds_reb = st.number_input("Over/Under Rebounds", value=6.5)
 odds_ast = st.number_input("Over/Under Assists", value=5.5)
 
-# Fetch NBA Games for Today from a Public API
+# Fetch NBA Games for Today from an Alternative API
 @st.cache_data
 def get_nba_games():
-    today = datetime.today().strftime('%Y-%m-%d')
-    url = f"https://www.balldontlie.io/api/v1/games?dates[]={today}"
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
-        if "data" in data and data["data"]:
-            games = [f"{game['home_team']['full_name']} vs {game['visitor_team']['full_name']}" for game in data['data']]
-            return games
-        else:
-            return ["No games found for today"]
-    return ["Error retrieving games"]
+    try:
+        today = datetime.today().strftime('%Y%m%d')
+        url = f"https://data.nba.net/data/10s/prod/v1/{today}/scoreboard.json"
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            if "games" in data and data["games"]:
+                games = [f"{game['hTeam']['triCode']} vs {game['vTeam']['triCode']}" for game in data['games']]
+                return games
+            else:
+                return ["No games found for today"]
+        return ["Error retrieving games"]
+    except Exception as e:
+        st.error(f"Failed to fetch games: {e}")
+        return ["Error retrieving games"]
 
 # Display NBA Games on the Left
 st.sidebar.title("Today's NBA Games")
