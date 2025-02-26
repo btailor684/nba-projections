@@ -1,26 +1,54 @@
 import streamlit as st
+import requests
 
 # Title
 st.title("NBA Player Projection & Betting Tool")
 
-# Static List of NBA Players and Predefined Stats
-nba_players = {
-    "LeBron James": {"pts": 27.1, "reb": 7.5, "ast": 7.3, "minutes": 36, "usage_rate": 32, "pace": 100, "def_eff": 108},
-    "Stephen Curry": {"pts": 29.8, "reb": 5.1, "ast": 6.2, "minutes": 34, "usage_rate": 31, "pace": 102, "def_eff": 106},
-    "Kevin Durant": {"pts": 28.5, "reb": 7.1, "ast": 5.8, "minutes": 35, "usage_rate": 30, "pace": 101, "def_eff": 107},
-    "Giannis Antetokounmpo": {"pts": 30.3, "reb": 11.5, "ast": 6.1, "minutes": 33, "usage_rate": 34, "pace": 104, "def_eff": 103},
-    "Luka Doncic": {"pts": 32.1, "reb": 8.4, "ast": 8.7, "minutes": 36, "usage_rate": 35, "pace": 101, "def_eff": 105},
-    "Nikola Jokic": {"pts": 26.7, "reb": 12.3, "ast": 9.8, "minutes": 34, "usage_rate": 29, "pace": 100, "def_eff": 102}
-}
+# Function to Fetch NBA Player Names
+@st.cache_data
+def get_nba_players():
+    url = "https://www.balldontlie.io/api/v1/players"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        return [player["first_name"] + " " + player["last_name"] for player in data["data"]]
+    return []
+
+# Fetch Player List
+dynamic_nba_players = get_nba_players()
 
 # User Input - Player Name with Autocomplete
-player_name = st.selectbox("Enter NBA Player Name", list(nba_players.keys()), index=0)
+player_name = st.text_input("Enter NBA Player Name")
+if player_name:
+    matching_players = [p for p in dynamic_nba_players if player_name.lower() in p.lower()]
+    player_name = st.selectbox("Select a Player", matching_players, index=0) if matching_players else None
 
 # User Input - Sportsbook Odds
 st.subheader("Enter Sportsbook Over/Under Lines:")
 odds_pts = st.number_input("Over/Under Points", value=25.5)
 odds_reb = st.number_input("Over/Under Rebounds", value=6.5)
 odds_ast = st.number_input("Over/Under Assists", value=5.5)
+
+# Fetch NBA Games for Today
+@st.cache_data
+def get_nba_games():
+    url = "https://www.balldontlie.io/api/v1/games"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        games = [f"{game['home_team']['full_name']} vs {game['visitor_team']['full_name']}" for game in data['data']]
+        return games
+    return ["No games available"]
+
+# Display NBA Games on the Left
+st.sidebar.title("Today's NBA Games")
+nba_games = get_nba_games()
+st.sidebar.write("\n".join(nba_games))
+
+# Placeholder Stats for Now
+placeholder_stats = {
+    "pts": 26.4, "reb": 7.1, "ast": 5.9, "minutes": 34.2, "usage_rate": 28.5, "pace": 100.4, "def_eff": 105.2
+}
 
 # Calculate Projections
 def calculate_projections(stats):
@@ -36,8 +64,7 @@ def calculate_projections(stats):
 
 # Display Results
 if player_name:
-    stats = nba_players[player_name]
-    proj_pts, proj_reb, proj_ast = calculate_projections(stats)
+    proj_pts, proj_reb, proj_ast = calculate_projections(placeholder_stats)
 
     st.subheader(f"Projections for {player_name}")
     st.write(f"- Points: {proj_pts}")
