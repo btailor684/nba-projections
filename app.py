@@ -34,15 +34,15 @@ def fetch_nba_games():
 
 # --- Fetch Active Players in Game ---
 def fetch_active_players(team_id):
-    url = f"https://api.balldontlie.io/v1/players?team_ids[]={team_id}&per_page=100"
+    url = f"https://api.balldontlie.io/v1/players?team_ids={team_id}&per_page=100"
     try:
         response = requests.get(url, headers=HEADERS)
         if response.status_code == 200:
             data = response.json()
             active_players = [
-                f"{player['first_name']} {player['last_name']}" 
-                for player in data.get("data", []) 
-                if player.get("id") and player.get("first_name") and player.get("last_name")
+                f"{player['first_name']} {player['last_name']}"
+                for player in data.get("data", [])
+                if player.get("weight") is not None  # Filters out inactive/retired players
             ]
             return active_players
         return []
@@ -53,7 +53,7 @@ def fetch_active_players(team_id):
 def get_player_id(player_name):
     url = "https://api.balldontlie.io/v1/players"
     try:
-        response = requests.get(url, headers=HEADERS, params={"search": player_name, "per_page": 10})
+        response = requests.get(url, headers=HEADERS, params={"search": player_name, "per_page": 25})
         if response.status_code == 200:
             data = response.json()
             for player in data.get("data", []):
@@ -70,7 +70,7 @@ def fetch_player_stats(player_id):
     url = "https://api.balldontlie.io/v1/season_averages"
     params = {
         "season": 2024,
-        "player_ids[]": player_id  # Ensure correct format
+        "player_ids[]": player_id  # Correct format for API
     }
     try:
         response = requests.get(url, headers=HEADERS, params=params)
@@ -105,13 +105,10 @@ if selected_game_data and "No games" not in selected_game and "Error" not in sel
     st.subheader(f"Player Props for {selected_game}")
     st.write(f"🔍 Debug - API Response Status: 200")
     
-    # Fetch only **active** players for **selected game**
+    # Fetch active players
     home_team_players = fetch_active_players(selected_game_data["home_team"])
     away_team_players = fetch_active_players(selected_game_data["away_team"])
-    
-    # Remove duplicates and empty values
-    all_players = list(set(home_team_players + away_team_players))
-    all_players = sorted([p for p in all_players if p])  # Sort alphabetically
+    all_players = home_team_players + away_team_players
 
     selected_player = st.selectbox("Select a Player", all_players)
     
@@ -119,13 +116,16 @@ if selected_game_data and "No games" not in selected_game and "Error" not in sel
         player_id = get_player_id(selected_player)
         if player_id:
             stats = fetch_player_stats(player_id)
-            st.write(f"### Stats for {selected_player}")
-            st.write(f"- **Points**: {stats['pts']}")
-            st.write(f"- **Assists**: {stats['ast']}")
-            st.write(f"- **Rebounds**: {stats['reb']}")
+            if stats['pts'] or stats['ast'] or stats['reb']:  # Only display if data exists
+                st.write(f"### Stats for {selected_player}")
+                st.write(f"- **Points**: {stats['pts']}")
+                st.write(f"- **Assists**: {stats['ast']}")
+                st.write(f"- **Rebounds**: {stats['reb']}")
+            else:
+                st.write("⚠️ No stats available for this player.")
         else:
             st.write("❌ No player stats found.")
-    
+
 else:
     st.write("No games available or an error occurred. Try again later.")
 
