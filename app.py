@@ -14,14 +14,12 @@ st.markdown("View today's NBA games and players in each matchup.")
 def fetch_nba_games():
     today = datetime.today().strftime('%Y-%m-%d')
     url = f"https://api.balldontlie.io/v1/games?start_date={today}&end_date={today}"
-    st.write(f"🔍 Debug: Games API URL - {url}")  # Debugging URL
     try:
         response = requests.get(url, headers=HEADERS, timeout=10)
-        st.write(f"🔍 Debug: API Response Status - {response.status_code}")  # Debugging Status Code
         if response.status_code == 200:
             data = response.json()
             if "data" in data:
-                games = [
+                return [
                     {
                         "matchup": f"{game['home_team']['full_name']} vs {game['visitor_team']['full_name']}",
                         "home_team_id": game['home_team']['id'],
@@ -29,28 +27,20 @@ def fetch_nba_games():
                     }
                     for game in data["data"]
                 ]
-                return games if games else []
         return []
-    except Exception as e:
-        st.write(f"⚠️ Error fetching games: {e}")
+    except:
         return []
 
 # --- Fetch Active Players in a Game ---
 def fetch_active_players(team_id):
     url = f"https://api.balldontlie.io/v1/players/active?team_ids[]={team_id}&per_page=100"
-    st.write(f"🔍 Debug: Players API URL - {url}")  # Debugging URL
     try:
         response = requests.get(url, headers=HEADERS)
-        st.write(f"🔍 Debug: API Response Status - {response.status_code}")  # Debugging Status Code
         if response.status_code == 200:
             data = response.json()
-            st.write(f"🔍 Debug: API Response Data - {data}")  # Debugging Full Response
-            players = [f"{player['first_name']} {player['last_name']}" for player in data.get("data", [])]
-            return players
-        else:
-            return []
-    except Exception as e:
-        st.write(f"⚠️ Error fetching players: {e}")
+            return [f"{player['first_name']} {player['last_name']}" for player in data.get("data", [])]
+        return []
+    except:
         return []
 
 # --- Sidebar: Display Games ---
