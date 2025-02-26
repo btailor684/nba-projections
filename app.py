@@ -5,18 +5,14 @@ from datetime import datetime
 # Title
 st.title("NBA Player Projection & Betting Tool")
 
-# Function to Fetch NBA Player Names from a Different Free API
+# Function to Fetch NBA Player Names from a Public API
 @st.cache_data
 def get_nba_players():
-    url = "https://api-nba-v1.p.rapidapi.com/players"
-    headers = {
-        "X-RapidAPI-Key": "YOUR_RAPIDAPI_KEY",
-        "X-RapidAPI-Host": "api-nba-v1.p.rapidapi.com"
-    }
-    response = requests.get(url, headers=headers)
+    url = "https://www.balldontlie.io/api/v1/players?per_page=100"
+    response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
-        return [f"{player['firstname']} {player['lastname']}" for player in data["response"]]
+        return [f"{player['first_name']} {player['last_name']}" for player in data["data"]]
     return []
 
 # Fetch Player List
@@ -34,19 +30,15 @@ odds_pts = st.number_input("Over/Under Points", value=25.5)
 odds_reb = st.number_input("Over/Under Rebounds", value=6.5)
 odds_ast = st.number_input("Over/Under Assists", value=5.5)
 
-# Fetch NBA Games for Today from a Different API
+# Fetch NBA Games for Today from a Public API
 @st.cache_data
 def get_nba_games():
     today = datetime.today().strftime('%Y-%m-%d')
-    url = "https://api-nba-v1.p.rapidapi.com/games"
-    headers = {
-        "X-RapidAPI-Key": "YOUR_RAPIDAPI_KEY",
-        "X-RapidAPI-Host": "api-nba-v1.p.rapidapi.com"
-    }
-    response = requests.get(url, headers=headers)
+    url = f"https://www.balldontlie.io/api/v1/games?start_date={today}&end_date={today}"
+    response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
-        games = [f"{game['teams']['home']['name']} vs {game['teams']['visitors']['name']}" for game in data['response'] if game['date'].startswith(today)]
+        games = [f"{game['home_team']['full_name']} vs {game['visitor_team']['full_name']}" for game in data['data']]
         return games if games else ["No games found for today"]
     return ["Error retrieving games"]
 
