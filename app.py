@@ -13,7 +13,7 @@ st.markdown("Your daily edge for NBA player prop bets. Get projections and recom
 # --- Fetch Daily NBA Games ---
 def fetch_nba_games():
     today = datetime.today().strftime('%Y-%m-%d')
-    url = f"https://www.balldontlie.io/api/v1/games?start_date={today}&end_date={today}"
+    url = f"https://api.balldontlie.io/v1/games?dates[]={today}"
     try:
         response = requests.get(url, headers=HEADERS, timeout=10)
         if response.status_code == 200:
@@ -34,20 +34,21 @@ def fetch_nba_games():
 
 # --- Fetch Player Stats ---
 def get_player_id(player_name):
-    url = "https://www.balldontlie.io/api/v1/players"
+    url = "https://api.balldontlie.io/v1/players"
     try:
-        response = requests.get(url, headers=HEADERS, params={"search": player_name, "per_page": 10})
-        if response.status_code == 200 and "data" in response.json():
+        response = requests.get(url, headers=HEADERS, params={"search": player_name, "per_page": 1})
+        if response.status_code == 200 and "data" in response.json() and response.json()["data"]:
             return response.json()["data"][0].get("id")
         return None
     except:
         return None
 
 def fetch_player_stats(player_id):
-    url = f"https://www.balldontlie.io/api/v1/season_averages?season=2024&player_ids[]={player_id}"
+    url = "https://api.balldontlie.io/v1/season_averages"
+    params = {"season": 2024, "player_ids[]": player_id}
     try:
-        response = requests.get(url, headers=HEADERS)
-        if response.status_code == 200 and "data" in response.json():
+        response = requests.get(url, headers=HEADERS, params=params)
+        if response.status_code == 200 and "data" in response.json() and response.json()["data"]:
             stats = response.json()["data"][0]
             return {
                 "pts": stats.get("pts", 0),
