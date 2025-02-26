@@ -29,24 +29,30 @@ def get_nba_games():
         st.error(f"Failed to fetch games: {e}")
         return []
 
-# Function to Generate Player Props Based on Projections
+# Function to Fetch Player Props Based on a More Reliable Source
 @st.cache_data
-def get_player_props(game_id):
+def get_player_props(team_name):
     try:
-        url = f"https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/events/{game_id}/competitions/"
-        response = requests.get(url)
+        url = f"https://stats.nba.com/stats/leaguedashplayerstats?Season=2023-24&SeasonType=Regular%20Season&PerMode=PerGame"
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Referer": "https://www.nba.com/stats/"
+        }
+        response = requests.get(url, headers=headers)
         if response.status_code == 200:
             data = response.json()
             players_props = []
-            for team in data["competitions"][0]["competitors"]:
-                team_name = team["team"]["displayName"]
-                for athlete in team["athletes"]:
+            headers = data["resultSets"][0]["headers"]
+            stats = data["resultSets"][0]["rowSet"]
+            for row in stats:
+                player_data = dict(zip(headers, row))
+                if team_name in player_data.get("TEAM_NAME", ""):
                     players_props.append({
-                        "player": athlete["displayName"],
-                        "team": team_name,
-                        "points": f"Projected Over {athlete.get('statistics', {}).get('points', 'N/A')} Points",
-                        "rebounds": f"Projected Over {athlete.get('statistics', {}).get('rebounds', 'N/A')} Rebounds",
-                        "assists": f"Projected Over {athlete.get('statistics', {}).get('assists', 'N/A')} Assists"
+                        "player": player_data["PLAYER_NAME"],
+                        "team": player_data["TEAM_NAME"],
+                        "points": f"Projected Over {player_data.get('PTS', 'N/A')} Points",
+                        "rebounds": f"Projected Over {player_data.get('REB', 'N/A')} Rebounds",
+                        "assists": f"Projected Over {player_data.get('AST', 'N/A')} Assists"
                     })
             return players_props
     except Exception as e:
@@ -65,7 +71,8 @@ else:
 # Display Player Props for Selected Game
 if selected_game:
     st.subheader(f"Player Props for {selected_game['matchup']}")
-    player_props = get_player_props(selected_game["game_id"])
+    player_props = get_player_props(selected_game["team1"])
+    player_props += get_player_props(selected_game["team2"])
     if player_props:
         for prop in player_props:
             st.write(f"**{prop['player']} ({prop['team']})**")
