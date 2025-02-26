@@ -4,8 +4,17 @@ import requests
 # Title
 st.title("NBA Player Projection & Betting Tool")
 
-# List of NBA Players (This should be replaced with an API call for live players)
-nba_players = ["LeBron James", "Stephen Curry", "Kevin Durant", "Giannis Antetokounmpo", "Luka Doncic", "Nikola Jokic"]
+# Fetch Live NBA Player Names (Using a Free API)
+@st.cache_data
+def get_nba_players():
+    url = "https://www.balldontlie.io/api/v1/players"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        return [player["first_name"] + " " + player["last_name"] for player in data["data"]]
+    return []
+
+nba_players = get_nba_players()
 
 # User Input - Player Name with Autocomplete
 player_name = st.selectbox("Enter NBA Player Name", nba_players, index=None, placeholder="Type or select a player")
