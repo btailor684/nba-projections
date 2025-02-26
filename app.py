@@ -54,10 +54,10 @@ def get_player_props(team_name):
                         "rebounds": f"Projected Over {player_data.get('REB', 'N/A')} Rebounds",
                         "assists": f"Projected Over {player_data.get('AST', 'N/A')} Assists"
                     })
-            return players_props
+            return players_props if players_props else []  # Ensure it returns a list
     except Exception as e:
         st.error(f"Failed to fetch player props: {e}")
-        return []
+        return []  # Return empty list to prevent errors
 
 # Display NBA Games on the Left
 st.sidebar.title("Today's NBA Games")
@@ -71,8 +71,10 @@ else:
 # Display Player Props for Selected Game
 if selected_game:
     st.subheader(f"Player Props for {selected_game['matchup']}")
+    st.write(f"Fetching data for: {selected_game['team1']} and {selected_game['team2']}")  # Debugging output
     player_props = get_player_props(selected_game["team1"])
     player_props += get_player_props(selected_game["team2"])
+    
     if player_props:
         for prop in player_props:
             st.write(f"**{prop['player']} ({prop['team']})**")
