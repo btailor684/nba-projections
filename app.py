@@ -1,26 +1,13 @@
 import streamlit as st
-import requests
 
 # Title
 st.title("NBA Player Projection & Betting Tool")
 
-# Fetch Live NBA Player Names (Using a Free API)
-@st.cache_data
-def get_nba_players():
-    url = "https://www.balldontlie.io/api/v1/players"
-    try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = response.json()
-            player_names = [player["first_name"] + " " + player["last_name"] for player in data["data"]]
-            return player_names if player_names else ["No players found"]
-    except Exception as e:
-        st.error(f"Error fetching players: {e}")
-    
-    # Fallback List if API Fails
-    return ["LeBron James", "Stephen Curry", "Kevin Durant", "Giannis Antetokounmpo", "Luka Doncic", "Nikola Jokic"]
-
-nba_players = get_nba_players()
+# Static List of NBA Players (No API Calls)
+nba_players = [
+    "LeBron James", "Stephen Curry", "Kevin Durant", "Giannis Antetokounmpo", "Luka Doncic", "Nikola Jokic",
+    "Jayson Tatum", "Joel Embiid", "Devin Booker", "Damian Lillard", "Anthony Davis", "Jimmy Butler"
+]
 
 # User Input - Player Name with Autocomplete
 player_name = st.selectbox("Enter NBA Player Name", nba_players, index=0)
@@ -31,9 +18,8 @@ odds_pts = st.number_input("Over/Under Points", value=25.5)
 odds_reb = st.number_input("Over/Under Rebounds", value=6.5)
 odds_ast = st.number_input("Over/Under Assists", value=5.5)
 
-# Fetch Live NBA Stats (Mock API Call for Now)
+# Fetch Mock NBA Stats
 def get_player_stats(player_name):
-    # Placeholder - Replace with real API call
     return {
         "pts": 26.4,
         "reb": 7.1,
