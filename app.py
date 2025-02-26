@@ -34,7 +34,7 @@ def fetch_nba_games():
 
 # --- Fetch Active Players in Game ---
 def fetch_active_players(team_id):
-    url = f"https://api.balldontlie.io/v1/players/active?team_ids[]={team_id}&per_page=100"
+    url = f"https://api.balldontlie.io/v1/players?team_ids[]={team_id}&per_page=100"
     try:
         response = requests.get(url, headers=HEADERS)
         if response.status_code == 200:
@@ -44,32 +44,49 @@ def fetch_active_players(team_id):
     except:
         return []
 
-# --- Fetch Player Stats ---
+# --- Fetch Player ID ---
 def get_player_id(player_name):
     url = "https://api.balldontlie.io/v1/players"
     try:
-        response = requests.get(url, headers=HEADERS, params={"search": player_name, "per_page": 1})
-        if response.status_code == 200 and "data" in response.json() and response.json()["data"]:
-            return response.json()["data"][0].get("id")
+        response = requests.get(url, headers=HEADERS, params={"search": player_name, "per_page": 5})
+        if response.status_code == 200:
+            data = response.json()
+            if "data" in data and len(data["data"]) > 0:
+                for player in data["data"]:
+                    if player["first_name"] + " " + player["last_name"] == player_name:
+                        return player["id"]
+            st.write(f"⚠️ Player ID not found for {player_name}")
         return None
-    except:
+    except Exception as e:
+        st.write(f"❌ Error retrieving player ID: {str(e)}")
         return None
 
+# --- Fetch Player Stats ---
 def fetch_player_stats(player_id):
     url = "https://api.balldontlie.io/v1/season_averages"
-    params = {"season": 2024, "player_ids[]": player_id}
+    params = {
+        "season": 2024,
+        "player_ids[]": player_id
+    }
     try:
         response = requests.get(url, headers=HEADERS, params=params)
-        if response.status_code == 200 and "data" in response.json() and response.json()["data"]:
-            stats = response.json()["data"][0]
-            return {
-                "pts": stats.get("pts", 0),
-                "ast": stats.get("ast", 0),
-                "reb": stats.get("reb", 0),
-                "min": float(stats.get("min", "0").split(":")[0])
-            }
+        if response.status_code == 200:
+            data = response.json()
+            if "data" in data and len(data["data"]) > 0:
+                stats = data["data"][0]
+                return {
+                    "pts": stats.get("pts", 0),
+                    "ast": stats.get("ast", 0),
+                    "reb": stats.get("reb", 0),
+                    "min": float(stats.get("min", "0").split(":")[0])
+                }
+            else:
+                st.write(f"⚠️ No stats available for player ID {player_id}")
+        else:
+            st.write(f"❌ API Error fetching player stats: {response.status_code}")
         return {"pts": 0, "ast": 0, "reb": 0, "min": 0}
-    except:
+    except Exception as e:
+        st.write(f"❌ Error retrieving player stats: {str(e)}")
         return {"pts": 0, "ast": 0, "reb": 0, "min": 0}
 
 # --- Sidebar: Display Games ---
