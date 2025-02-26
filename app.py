@@ -4,8 +4,11 @@ import requests
 # Title
 st.title("NBA Player Projection & Betting Tool")
 
-# User Input - Player Name
-player_name = st.text_input("Enter NBA Player Name")
+# List of NBA Players (This should be replaced with an API call for live players)
+nba_players = ["LeBron James", "Stephen Curry", "Kevin Durant", "Giannis Antetokounmpo", "Luka Doncic", "Nikola Jokic"]
+
+# User Input - Player Name with Autocomplete
+player_name = st.selectbox("Enter NBA Player Name", nba_players, index=None, placeholder="Type or select a player")
 
 # User Input - Sportsbook Odds
 st.subheader("Enter Sportsbook Over/Under Lines:")
