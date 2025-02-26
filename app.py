@@ -28,24 +28,21 @@ def get_nba_games():
         st.error(f"Failed to fetch games: {e}")
         return []
 
-# Function to Fetch Player Stats from Last 8 Games
+# Function to Fetch Player Stats from an Alternative Reliable Source
 @st.cache_data
 def get_player_trends(player_name):
     try:
-        url = f"https://www.balldontlie.io/api/v1/players?search={player_name}"
+        url = f"https://api.sportsdata.io/v3/nba/stats/json/PlayerGameStatsByDate/{datetime.today().strftime('%Y-%m-%d')}?key=YOUR_SPORTSDATA_API_KEY"
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
-            if "data" in data and data["data"]:
-                player_id = data["data"][0]["id"]
-                stats_url = f"https://www.balldontlie.io/api/v1/stats?player_ids[]={player_id}&per_page=8"
-                stats_response = requests.get(stats_url)
-                if stats_response.status_code == 200:
-                    stats_data = stats_response.json()["data"]
-                    points_avg = sum([game["pts"] for game in stats_data]) / len(stats_data)
-                    rebounds_avg = sum([game["reb"] for game in stats_data]) / len(stats_data)
-                    assists_avg = sum([game["ast"] for game in stats_data]) / len(stats_data)
-                    return {"points": points_avg, "rebounds": rebounds_avg, "assists": assists_avg}
+            player_data = next((p for p in data if p["Name"] == player_name), None)
+            if player_data:
+                return {
+                    "points": player_data["Points"],
+                    "rebounds": player_data["Rebounds"],
+                    "assists": player_data["Assists"]
+                }
         return None
     except Exception as e:
         st.error(f"Failed to fetch player stats: {e}")
@@ -57,15 +54,15 @@ def get_profitable_props():
     props = []
     for game in get_nba_games():
         for team in [game["team1"], game["team2"]]:
-            url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team.lower().replace(' ', '-')}/roster"
+            url = f"https://api.sportsdata.io/v3/nba/scores/json/PlayersBasic/{team.replace(' ', '')}?key=YOUR_SPORTSDATA_API_KEY"
             response = requests.get(url)
             if response.status_code == 200:
                 team_data = response.json()
-                for player in team_data["athletes"][:4]:  # Pick top 4 key players
-                    stats = get_player_trends(player["fullName"])
+                for player in team_data[:4]:  # Pick top 4 key players
+                    stats = get_player_trends(player["Name"])
                     if stats:
                         props.append({
-                            "player": player["fullName"],
+                            "player": player["Name"],
                             "team": team,
                             "prop": f"Over {round(stats['points']+2,1)} Points" if stats["points"] else "Over 20.5 Points",
                             "prop_reb": f"Over {round(stats['rebounds']+1,1)} Rebounds" if stats["rebounds"] else "Over 5.5 Rebounds",
