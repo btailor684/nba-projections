@@ -5,35 +5,36 @@ from datetime import datetime
 # Title
 st.title("NBA Player Projection & Betting Tool")
 
-# Function to Fetch NBA Player Names from a More Reliable API
+# Function to Fetch NBA Players Playing Today
 @st.cache_data
-def get_nba_players():
+def get_today_nba_players():
     try:
-        url = "https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/athletes"
+        today = datetime.today().strftime('%Y-%m-%d')
+        url = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard"
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
-            players = [f"{player['fullName']}" for player in data["items"]]
-            return players
-        else:
-            st.error(f"Error fetching players: {response.status_code}")
-            return ["LeBron James", "Stephen Curry", "Kevin Durant", "Giannis Antetokounmpo", "Luka Doncic", "Nikola Jokic"]
+            if "events" in data and data["events"]:
+                players = set()
+                for game in data['events']:
+                    for competitor in game['competitions'][0]['competitors']:
+                        team_url = competitor['team']['links'][0]['href']
+                        team_response = requests.get(team_url)
+                        if team_response.status_code == 200:
+                            team_data = team_response.json()
+                            for athlete in team_data.get("athletes", []):
+                                players.add(athlete['displayName'])
+                return sorted(players)
+        return ["No players found for today's games"]
     except Exception as e:
-        st.error(f"Failed to fetch players: {e}")
-        return ["LeBron James", "Stephen Curry", "Kevin Durant", "Giannis Antetokounmpo", "Luka Doncic", "Nikola Jokic"]
+        st.error(f"Failed to fetch today's players: {e}")
+        return ["Error retrieving today's players"]
 
-# Fetch Player List
-dynamic_nba_players = get_nba_players()
+# Fetch Players Playing Today
+today_nba_players = get_today_nba_players()
 
 # User Input - Player Name with Autocomplete
-player_name = st.text_input("Enter NBA Player Name")
-if player_name:
-    matching_players = [p for p in dynamic_nba_players if player_name.lower() in p.lower()]
-    if matching_players:
-        player_name = st.selectbox("Select a Player", matching_players)
-    else:
-        st.warning("No matching player found. Try a different name.")
-        player_name = None
+player_name = st.selectbox("Select an NBA Player Playing Today", today_nba_players)
 
 # User Input - Sportsbook Odds
 st.subheader("Enter Sportsbook Over/Under Lines:")
@@ -45,7 +46,6 @@ odds_ast = st.number_input("Over/Under Assists", value=5.5)
 @st.cache_data
 def get_nba_games():
     try:
-        today = datetime.today().strftime('%Y-%m-%d')
         url = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard"
         response = requests.get(url)
         if response.status_code == 200:
@@ -53,9 +53,7 @@ def get_nba_games():
             if "events" in data and data["events"]:
                 games = [f"{game['competitions'][0]['competitors'][0]['team']['displayName']} vs {game['competitions'][0]['competitors'][1]['team']['displayName']}" for game in data['events']]
                 return games
-            else:
-                return ["No games found for today"]
-        return ["Error retrieving games"]
+        return ["No games found for today"]
     except Exception as e:
         st.error(f"Failed to fetch games: {e}")
         return ["Error retrieving games"]
@@ -83,7 +81,7 @@ def calculate_projections(stats):
     return round(proj_pts, 1), round(proj_reb, 1), round(proj_ast, 1)
 
 # Display Results
-if player_name:
+if player_name and player_name != "No players found for today's games":
     proj_pts, proj_reb, proj_ast = calculate_projections(placeholder_stats)
 
     st.subheader(f"Projections for {player_name}")
