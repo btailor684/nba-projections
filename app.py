@@ -5,15 +5,15 @@ from datetime import datetime
 # Title
 st.title("NBA Player Projection & Betting Tool")
 
-# Function to Fetch NBA Player Names from an Alternative API or Static List
+# Function to Fetch NBA Player Names from a More Reliable API
 @st.cache_data
 def get_nba_players():
     try:
-        url = "https://data.nba.net/data/10s/prod/v1/2024/players.json"
+        url = "https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/athletes"
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
-            players = [f"{player['firstName']} {player['lastName']}" for player in data["league"]["standard"]]
+            players = [f"{player['fullName']}" for player in data["items"]]
             return players
         else:
             st.error(f"Error fetching players: {response.status_code}")
@@ -41,17 +41,17 @@ odds_pts = st.number_input("Over/Under Points", value=25.5)
 odds_reb = st.number_input("Over/Under Rebounds", value=6.5)
 odds_ast = st.number_input("Over/Under Assists", value=5.5)
 
-# Fetch NBA Games for Today from an Alternative API
+# Fetch NBA Games for Today from ESPN API
 @st.cache_data
 def get_nba_games():
     try:
-        today = datetime.today().strftime('%Y%m%d')
-        url = f"https://data.nba.net/data/10s/prod/v1/{today}/scoreboard.json"
+        today = datetime.today().strftime('%Y-%m-%d')
+        url = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard"
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
-            if "games" in data and data["games"]:
-                games = [f"{game['hTeam']['triCode']} vs {game['vTeam']['triCode']}" for game in data['games']]
+            if "events" in data and data["events"]:
+                games = [f"{game['competitions'][0]['competitors'][0]['team']['displayName']} vs {game['competitions'][0]['competitors'][1]['team']['displayName']}" for game in data['events']]
                 return games
             else:
                 return ["No games found for today"]
