@@ -16,6 +16,7 @@ def get_nba_games():
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
+            st.write("Debug: Raw ESPN API Response:", data)  # Debugging output
             if "events" in data and data["events"]:
                 games = [
                     {
@@ -90,19 +91,20 @@ if selected_game:
 
 # User Input - Sportsbook Odds for Selected Player
 st.subheader("Compare with Sportsbook Lines")
-selected_player = st.selectbox("Select a Player to Compare:", [p['player'] for p in player_props] if player_props else [])
-if selected_player:
-    sportsbook_points = st.number_input("Enter Sportsbook Line for Points:", value=0.0)
-    sportsbook_rebounds = st.number_input("Enter Sportsbook Line for Rebounds:", value=0.0)
-    sportsbook_assists = st.number_input("Enter Sportsbook Line for Assists:", value=0.0)
-    
-    player_data = next((p for p in player_props if p['player'] == selected_player), None)
-    if player_data:
-        def compare_prop(sportsbook_line, projected):
-            projected_value = float(projected.split()[-2]) if projected.split()[-2].replace('.', '', 1).isdigit() else 0
-            return "BET OVER" if sportsbook_line < projected_value else "NO BET"
+if player_props:
+    selected_player = st.selectbox("Select a Player to Compare:", [p['player'] for p in player_props])
+    if selected_player:
+        sportsbook_points = st.number_input("Enter Sportsbook Line for Points:", value=0.0)
+        sportsbook_rebounds = st.number_input("Enter Sportsbook Line for Rebounds:", value=0.0)
+        sportsbook_assists = st.number_input("Enter Sportsbook Line for Assists:", value=0.0)
         
-        st.write(f"**Recommendation for {selected_player}:**")
-        st.write(f"- Points: {compare_prop(sportsbook_points, player_data['points'])}")
-        st.write(f"- Rebounds: {compare_prop(sportsbook_rebounds, player_data['rebounds'])}")
-        st.write(f"- Assists: {compare_prop(sportsbook_assists, player_data['assists'])}")
+        player_data = next((p for p in player_props if p['player'] == selected_player), None)
+        if player_data:
+            def compare_prop(sportsbook_line, projected):
+                projected_value = float(projected.split()[-2]) if projected.split()[-2].replace('.', '', 1).isdigit() else 0
+                return "BET OVER" if sportsbook_line < projected_value else "NO BET"
+            
+            st.write(f"**Recommendation for {selected_player}:**")
+            st.write(f"- Points: {compare_prop(sportsbook_points, player_data['points'])}")
+            st.write(f"- Rebounds: {compare_prop(sportsbook_rebounds, player_data['rebounds'])}")
+            st.write(f"- Assists: {compare_prop(sportsbook_assists, player_data['assists'])}")
