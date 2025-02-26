@@ -4,6 +4,7 @@ from datetime import datetime
 
 # API Key for balldontlie.io
 API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
+HEADERS = {"Authorization": f"Bearer {API_KEY}"}
 
 # App Title and Description
 st.title("PropEdge NBA")
@@ -12,23 +13,22 @@ st.markdown("Your daily edge for NBA player prop bets. Get projections and recom
 # --- Fetch Daily NBA Games ---
 def fetch_nba_games():
     today = datetime.today().strftime('%Y-%m-%d')
-    url = f"https://www.balldontlie.io/api/v1/games?start_date={today}&end_date={today}&api_key={API_KEY}"
+    url = f"https://www.balldontlie.io/api/v1/games?start_date={today}&end_date={today}"
     try:
-        response = requests.get(url, timeout=10)
-        st.write("Debug: Raw API Response for Games:", response.text)  # Debugging Output
+        response = requests.get(url, headers=HEADERS, timeout=10)
         if response.status_code == 200:
             data = response.json()
-            games = [
-                {
-                    "matchup": f"{game['home_team']['full_name']} vs {game['visitor_team']['full_name']}",
-                    "home_team": game['home_team']['abbreviation'],
-                    "away_team": game['visitor_team']['abbreviation']
-                }
-                for game in data.get('data', [])
-            ]
-            return games if games else [{"matchup": "No games found today", "home_team": "", "away_team": ""}]
-        else:
-            return [{"matchup": f"API Error (Status: {response.status_code})", "home_team": "", "away_team": ""}]
+            if "data" in data:
+                games = [
+                    {
+                        "matchup": f"{game['home_team']['full_name']} vs {game['visitor_team']['full_name']}",
+                        "home_team": game['home_team']['abbreviation'],
+                        "away_team": game['visitor_team']['abbreviation']
+                    }
+                    for game in data["data"]
+                ]
+                return games if games else [{"matchup": "No games found today", "home_team": "", "away_team": ""}]
+        return [{"matchup": f"API Error (Status: {response.status_code})", "home_team": "", "away_team": ""}]
     except Exception as e:
         return [{"matchup": f"Error: {str(e)}", "home_team": "", "away_team": ""}]
 
@@ -36,18 +36,18 @@ def fetch_nba_games():
 def get_player_id(player_name):
     url = "https://www.balldontlie.io/api/v1/players"
     try:
-        response = requests.get(url, params={"search": player_name, "per_page": 10, "api_key": API_KEY})
-        if response.status_code == 200 and response.json()["data"]:
-            return response.json()["data"][0]["id"]
+        response = requests.get(url, headers=HEADERS, params={"search": player_name, "per_page": 10})
+        if response.status_code == 200 and "data" in response.json():
+            return response.json()["data"][0].get("id")
         return None
     except:
         return None
 
 def fetch_player_stats(player_id):
-    url = f"https://www.balldontlie.io/api/v1/season_averages?season=2024&player_ids[]={player_id}&api_key={API_KEY}"
+    url = f"https://www.balldontlie.io/api/v1/season_averages?season=2024&player_ids[]={player_id}"
     try:
-        response = requests.get(url)
-        if response.status_code == 200 and response.json()["data"]:
+        response = requests.get(url, headers=HEADERS)
+        if response.status_code == 200 and "data" in response.json():
             stats = response.json()["data"][0]
             return {
                 "pts": stats.get("pts", 0),
