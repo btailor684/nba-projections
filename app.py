@@ -103,7 +103,6 @@ selected_game_data = next((game for game in games if game["matchup"] == selected
 if selected_game_data and "No games" not in selected_game and "Error" not in selected_game:
     st.subheader(f"Player Props for {selected_game}")
     
-    # Mock players for each team (expand with real roster API later)
     team_players = {
         "LAL": ["LeBron James", "Anthony Davis"],
         "CHA": ["LaMelo Ball"],
@@ -116,7 +115,6 @@ if selected_game_data and "No games" not in selected_game and "Error" not in sel
     all_players = home_team_players + away_team_players
 
     if all_players:
-        # Build table data
         table_data = []
         for player in all_players:
             player_id = get_player_id(player)
@@ -125,23 +123,5 @@ if selected_game_data and "No games" not in selected_game and "Error" not in sel
             opp_defense = mock_defense.get(opp_team, {"pts_allowed": 25.0, "reb_allowed": 10.0, "ast_allowed": 6.0})
             projections = calculate_projections(stats, opp_defense)
             odds = mock_odds.get(player, {"pts": 0, "ast": 0, "reb": 0})
-
-            table_data.extend([
-                {"Player": player, "Stat": "PTS", "Projected": projections["pts"], "Line": odds["pts"], "Recommendation": recommend_bet(projections["pts"], odds["pts"])},
-                {"Player": player, "Stat": "AST", "Projected": projections["ast"], "Line": odds["ast"], "Recommendation": recommend_bet(projections["ast"], odds["ast"])},
-                {"Player": player, "Stat": "REB", "Projected": projections["reb"], "Line": odds["reb"], "Recommendation": recommend_bet(projections["reb"], odds["reb"])}
-            ])
-
-        # Display table
+            table_data.append([player, "PTS", projections["pts"], odds["pts"], recommend_bet(projections["pts"], odds["pts"])])
         st.table(table_data)
-
-        st.markdown("**Legend**: ✅ Good Play (Edge ≥ 2.0) | ❌ Avoid (Edge ≤ -2.0) | Neutral (In between)")
-        st.success("Use these projections to find your edge!")
-    else:
-        st.write("No players available for this matchup yet.")
-else:
-    st.write("No games available or an error occurred. Try again later.")
-
-# Footer
-st.markdown("---")
-st.write("Built with ❤️ for NBA prop bettors | Data: balldontlie.io | Odds: Mock (upgrade to real API)")
