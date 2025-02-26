@@ -3,32 +3,24 @@ import streamlit as st
 # Title
 st.title("NBA Player Projection & Betting Tool")
 
-# Static List of NBA Players (No API Calls)
-nba_players = [
-    "LeBron James", "Stephen Curry", "Kevin Durant", "Giannis Antetokounmpo", "Luka Doncic", "Nikola Jokic",
-    "Jayson Tatum", "Joel Embiid", "Devin Booker", "Damian Lillard", "Anthony Davis", "Jimmy Butler"
-]
+# Static List of NBA Players and Predefined Stats
+nba_players = {
+    "LeBron James": {"pts": 27.1, "reb": 7.5, "ast": 7.3, "minutes": 36, "usage_rate": 32, "pace": 100, "def_eff": 108},
+    "Stephen Curry": {"pts": 29.8, "reb": 5.1, "ast": 6.2, "minutes": 34, "usage_rate": 31, "pace": 102, "def_eff": 106},
+    "Kevin Durant": {"pts": 28.5, "reb": 7.1, "ast": 5.8, "minutes": 35, "usage_rate": 30, "pace": 101, "def_eff": 107},
+    "Giannis Antetokounmpo": {"pts": 30.3, "reb": 11.5, "ast": 6.1, "minutes": 33, "usage_rate": 34, "pace": 104, "def_eff": 103},
+    "Luka Doncic": {"pts": 32.1, "reb": 8.4, "ast": 8.7, "minutes": 36, "usage_rate": 35, "pace": 101, "def_eff": 105},
+    "Nikola Jokic": {"pts": 26.7, "reb": 12.3, "ast": 9.8, "minutes": 34, "usage_rate": 29, "pace": 100, "def_eff": 102}
+}
 
 # User Input - Player Name with Autocomplete
-player_name = st.selectbox("Enter NBA Player Name", nba_players, index=0)
+player_name = st.selectbox("Enter NBA Player Name", list(nba_players.keys()), index=0)
 
 # User Input - Sportsbook Odds
 st.subheader("Enter Sportsbook Over/Under Lines:")
 odds_pts = st.number_input("Over/Under Points", value=25.5)
 odds_reb = st.number_input("Over/Under Rebounds", value=6.5)
 odds_ast = st.number_input("Over/Under Assists", value=5.5)
-
-# Fetch Mock NBA Stats
-def get_player_stats(player_name):
-    return {
-        "pts": 26.4,
-        "reb": 7.1,
-        "ast": 5.9,
-        "minutes": 34.2,
-        "usage_rate": 28.5,
-        "pace": 100.4,
-        "def_eff": 105.2  # Opponent Defensive Efficiency
-    }
 
 # Calculate Projections
 def calculate_projections(stats):
@@ -44,7 +36,7 @@ def calculate_projections(stats):
 
 # Display Results
 if player_name:
-    stats = get_player_stats(player_name)
+    stats = nba_players[player_name]
     proj_pts, proj_reb, proj_ast = calculate_projections(stats)
 
     st.subheader(f"Projections for {player_name}")
