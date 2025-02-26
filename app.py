@@ -21,7 +21,7 @@ def fetch_nba_games():
             if "data" in data:
                 games = [
                     {
-                        "matchup": "{game['home_team']['full_name']} vs {game['visitor_team']['full_name']}",
+                        "matchup": f"{game['home_team']['full_name']} vs {game['visitor_team']['full_name']}",
                         "home_team": game['home_team']['id'],
                         "away_team": game['visitor_team']['id']
                     }
@@ -34,13 +34,32 @@ def fetch_nba_games():
 
 # --- Fetch Active Players in Game ---
 def fetch_active_players(team_id):
-    url = f"https://api.balldontlie.io/v1/players?team_ids={team_id}&per_page=50"
+    """Fetches only ACTIVE players for a specific team using the correct endpoint."""
+    url = f"https://api.balldontlie.io/v1/players/active?team_ids[]={team_id}&per_page=100"
+    players = []
+    cursor = None  # Used for pagination
+
     try:
-        response = requests.get(url, headers=HEADERS)
-        if response.status_code == 200:
-            data = response.json()
-            return [f"{player['first_name']} {player['last_name']}" for player in data.get("data", [])]
-        return []
+        while True:
+            params = {"per_page": 100}  # Max limit
+            if cursor:
+                params["cursor"] = cursor
+
+            response = requests.get(url, headers=HEADERS, params=params)
+            
+            if response.status_code == 200:
+                data = response.json()
+                players.extend([f"{player['first_name']} {player['last_name']}" for player in data.get("data", [])])
+
+                # Check if more pages exist
+                cursor = data["meta"].get("next_cursor")
+                if not cursor:
+                    break  # Stop if no more pages
+
+            else:
+                break  # Stop if API fails
+
+        return players
     except:
         return []
 
