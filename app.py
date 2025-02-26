@@ -5,11 +5,14 @@ from datetime import datetime
 # Title
 st.title("NBA Profitable Player Props & Betting Tool")
 
+# Get Today's Date
+TODAY_DATE = datetime.today().strftime('%Y-%m-%d')
+
 # Function to Fetch NBA Games for Today
 @st.cache_data
 def get_nba_games():
     try:
-        url = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard"
+        url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates={TODAY_DATE}"
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
@@ -29,11 +32,11 @@ def get_nba_games():
         st.error(f"Failed to fetch games: {e}")
         return []
 
-# Function to Fetch Player Props Based on a More Reliable Source
+# Function to Fetch Player Props Based on More Reliable Source
 @st.cache_data
 def get_player_props(team_name):
     try:
-        url = f"https://stats.nba.com/stats/leaguedashplayerstats?Season=2023-24&SeasonType=Regular%20Season&PerMode=PerGame"
+        url = "https://stats.nba.com/stats/leaguedashplayerstats?Season=2023-24&SeasonType=Regular%20Season&PerMode=PerGame"
         headers = {
             "User-Agent": "Mozilla/5.0",
             "Referer": "https://www.nba.com/stats/"
@@ -54,10 +57,10 @@ def get_player_props(team_name):
                         "rebounds": f"Projected Over {player_data.get('REB', 'N/A')} Rebounds",
                         "assists": f"Projected Over {player_data.get('AST', 'N/A')} Assists"
                     })
-            return players_props if players_props else []  # Ensure it returns a list
+            return players_props if players_props else []  # Ensure list is returned
     except Exception as e:
         st.error(f"Failed to fetch player props: {e}")
-        return []  # Return empty list to prevent errors
+        return []  # Prevent crashes by returning an empty list
 
 # Display NBA Games on the Left
 st.sidebar.title("Today's NBA Games")
