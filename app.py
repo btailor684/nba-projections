@@ -30,37 +30,40 @@ def fetch_nba_games():
                 return games if games else []
         return []
     except Exception as e:
+        st.error(f"Error fetching games: {str(e)}")
         return []
 
 # --- Fetch Active Players in Game ---
 def fetch_active_players(team_id):
     """Fetches only ACTIVE players for a specific team using the correct endpoint."""
-    url = f"https://api.balldontlie.io/v1/players/active?team_ids[]={team_id}&per_page=100"
-    players = []
-    cursor = None  # Used for pagination
-
+    url = f"https://api.balldontlie.io/v1/players/active"
+    params = {"team_ids[]": team_id, "per_page": 100}
+    
     try:
-        while True:
-            params = {"per_page": 100}  # Max limit
-            if cursor:
-                params["cursor"] = cursor
+        response = requests.get(url, headers=HEADERS, params=params)
+        
+        # Debugging response
+        st.write(f"🔍 Debug: API Response Status - {response.status_code}")
+        st.write(f"🔍 Debug: API URL - {response.url}")
 
-            response = requests.get(url, headers=HEADERS, params=params)
+        if response.status_code == 200:
+            data = response.json()
+            st.write(f"🔍 Debug: API Response Data - {data}")  # Print full response for debugging
             
-            if response.status_code == 200:
-                data = response.json()
-                players.extend([f"{player['first_name']} {player['last_name']}" for player in data.get("data", [])])
+            players = [f"{player['first_name']} {player['last_name']}" for player in data.get("data", [])]
 
-                # Check if more pages exist
-                cursor = data["meta"].get("next_cursor")
-                if not cursor:
-                    break  # Stop if no more pages
-
+            # Print players found
+            if players:
+                st.write(f"✅ Found {len(players)} active players: {players}")
             else:
-                break  # Stop if API fails
+                st.write("⚠ No active players found in API response.")
 
-        return players
-    except:
+            return players
+        else:
+            st.error(f"API Error: {response.status_code} - {response.text}")
+            return []
+    except Exception as e:
+        st.error(f"Error fetching active players: {str(e)}")
         return []
 
 # --- Sidebar: Display Games ---
@@ -83,7 +86,7 @@ if selected_game_data:
         st.write("### Players in this game:")
         st.table({"Players": all_players})
     else:
-        st.write("No active players found for this game.")
+        st.write("⚠ No active players found for this game.")
 else:
     st.write("No games available today.")
 
