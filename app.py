@@ -36,32 +36,39 @@ if nba_games:
 else:
     st.sidebar.write("No games found for today")
 
-# Function to Fetch Profitable Player Props
+# Function to Fetch Player Props for Today's Games
 @st.cache_data
-def get_profitable_props():
+def get_player_props():
     try:
         # Placeholder logic: Replace with actual API call for player props
-        profitable_props = [
-            {"player": "LeBron James", "team": "Lakers", "prop": "Over 27.5 Points"},
-            {"player": "Stephen Curry", "team": "Warriors", "prop": "Over 4.5 Threes"},
-            {"player": "Nikola Jokic", "team": "Nuggets", "prop": "Over 9.5 Assists"},
-            {"player": "Luka Doncic", "team": "Mavericks", "prop": "Over 8.5 Rebounds"},
-        ]
-        return profitable_props
+        props = []
+        for game in nba_games:
+            team1, team2 = game["matchup"].split(" vs ")
+            props.extend([
+                {"player": f"Top Scorer {team1}", "team": team1, "prop": "Over 25.5 Points"},
+                {"player": f"Top Rebounder {team1}", "team": team1, "prop": "Over 9.5 Rebounds"},
+                {"player": f"Top Assister {team1}", "team": team1, "prop": "Over 7.5 Assists"},
+                {"player": f"Best 3PT Shooter {team1}", "team": team1, "prop": "Over 3.5 Threes"},
+                {"player": f"Top Scorer {team2}", "team": team2, "prop": "Over 25.5 Points"},
+                {"player": f"Top Rebounder {team2}", "team": team2, "prop": "Over 9.5 Rebounds"},
+                {"player": f"Top Assister {team2}", "team": team2, "prop": "Over 7.5 Assists"},
+                {"player": f"Best 3PT Shooter {team2}", "team": team2, "prop": "Over 3.5 Threes"},
+            ])
+        return props
     except Exception as e:
-        st.error(f"Failed to fetch profitable props: {e}")
+        st.error(f"Failed to fetch player props: {e}")
         return []
 
 # Display Profitable Player Props
-st.subheader("Profitable Player Props for Today")
-profitable_props = get_profitable_props()
+st.subheader("Profitable Player Props for Today's Games")
+player_props = get_player_props()
 selected_prop = None
-if profitable_props:
+if player_props:
     selected_prop = st.selectbox("Select a Player Prop to Compare with Sportsbook:", [
-        f"{prop['player']} ({prop['team']}) - {prop['prop']}" for prop in profitable_props
+        f"{prop['player']} ({prop['team']}) - {prop['prop']}" for prop in player_props
     ])
 else:
-    st.write("No profitable props found")
+    st.write("No player props found")
 
 # User Input - Sportsbook Odds for Selected Prop
 if selected_prop:
