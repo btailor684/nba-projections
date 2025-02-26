@@ -4,7 +4,7 @@ from datetime import datetime
 
 # API Key for balldontlie.io
 API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
-HEADERS = {"Authorization": API_KEY}  # Ensure correct API authentication
+HEADERS = {"Authorization": API_KEY}
 
 # App Title and Description
 st.set_page_config(page_title="PropEdge NBA", layout="wide")  
@@ -40,7 +40,7 @@ def fetch_nba_games():
                 ]
                 return games if games else []
         return []
-    except:
+    except Exception as e:
         return []
 
 # Fetch Active Players in Game
@@ -63,11 +63,19 @@ def fetch_active_players(team_id):
 # Fetch Player Stats
 def fetch_player_stats(player_id):
     url = f"https://api.balldontlie.io/v1/season_averages?season=2024&player_ids[]={player_id}"
+    
+    # Debug: Print URL to ensure the correct player_id is passed
+    st.write(f"🔍 Debug: Player Stats API Request - {url}")
+
     try:
         response = requests.get(url, headers=HEADERS)
+        
+        # Debug: Print full API response
+        st.write(f"🔍 Debug: API Response - {response.json()}")
+
         if response.status_code == 200:
             data = response.json()
-            if data["data"]:
+            if "data" in data and data["data"]:
                 stats = data["data"][0]
                 return {
                     "PTS": stats.get("pts", 0),
@@ -107,6 +115,8 @@ if selected_game_data:
         selected_player = next((p for p in all_players if p["name"] == selected_player_name), None)
 
         if selected_player:
+            st.write(f"🔎 Fetching stats for: **{selected_player_name} (ID: {selected_player['id']})**")
+
             # Fetch and Display Player Stats
             player_stats = fetch_player_stats(selected_player["id"])
 
@@ -117,7 +127,7 @@ if selected_game_data:
                 st.metric("Rebounds Per Game", player_stats["REB"])
                 st.metric("Field Goal %", f"{player_stats['FG%']}%")
             else:
-                st.write("⚠️ No stats available for this player.")
+                st.warning("⚠️ No stats available for this player.")
     else:
         st.write("❌ No active players found for this game.")
 else:
