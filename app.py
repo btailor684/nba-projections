@@ -32,17 +32,21 @@ def fetch_nba_games():
         if response.status_code == 200:
             data = response.json()
             if "data" in data:
-                games = [
-                    {
+                games = []
+                for game in data["data"]:
+                    # Extract proper game time if available
+                    game_time = game.get("datetime", "Unknown Time")
+                    if game_time != "Unknown Time":
+                        game_time = datetime.strptime(game_time, "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%B %d, %Y - %I:%M %p ET")
+
+                    games.append({
                         "matchup": f"{game['home_team']['full_name']} vs {game['visitor_team']['full_name']}",
                         "home_team": game['home_team']['id'],
                         "away_team": game['visitor_team']['id'],
                         "home_team_name": game['home_team']['full_name'],
                         "away_team_name": game['visitor_team']['full_name'],
-                        "game_time": game.get('status', 'Time Unknown')
-                    }
-                    for game in data["data"]
-                ]
+                        "game_time": game_time
+                    })
                 return games if games else []
         return []
     except Exception as e:
@@ -59,7 +63,7 @@ def fetch_active_players(team_id):
                 "name": f"{player['first_name']} {player['last_name']}",
                 "position": player.get("position", "N/A"),
                 "team": player.get("team", {}).get("full_name", "Unknown"),
-                "image": f"https://nba-players.herokuapp.com/players/{player['last_name']}/{player['first_name']}"
+                "image": f"https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/{player['id']}.png"  # More reliable NBA headshots
             } for player in data.get("data", [])]
         return []
     except:
@@ -75,7 +79,7 @@ selected_game_data = next((game for game in games if game["matchup"] == selected
 # Main Content
 if selected_game_data:
     st.subheader(f"Players for {selected_game}")
-    st.write(f"🕒 Game Time: {selected_game_data['game_time']}")
+    st.write(f"🕒 Game Time: **{selected_game_data['game_time']}**")  # Fix game time display
     
     # Fetch active players
     home_team_players = fetch_active_players(selected_game_data["home_team"])
