@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+from datetime import datetime
 
 # Title
 st.title("NBA Player Projection & Betting Tool")
@@ -7,7 +8,7 @@ st.title("NBA Player Projection & Betting Tool")
 # Function to Fetch NBA Player Names
 @st.cache_data
 def get_nba_players():
-    url = "https://www.balldontlie.io/api/v1/players"
+    url = "https://www.balldontlie.io/api/v1/players?per_page=100"
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
@@ -21,7 +22,7 @@ dynamic_nba_players = get_nba_players()
 player_name = st.text_input("Enter NBA Player Name")
 if player_name:
     matching_players = [p for p in dynamic_nba_players if player_name.lower() in p.lower()]
-    player_name = st.selectbox("Select a Player", matching_players, index=0) if matching_players else None
+    player_name = st.selectbox("Select a Player", matching_players) if matching_players else None
 
 # User Input - Sportsbook Odds
 st.subheader("Enter Sportsbook Over/Under Lines:")
@@ -32,13 +33,14 @@ odds_ast = st.number_input("Over/Under Assists", value=5.5)
 # Fetch NBA Games for Today
 @st.cache_data
 def get_nba_games():
-    url = "https://www.balldontlie.io/api/v1/games"
+    today = datetime.today().strftime('%Y-%m-%d')
+    url = f"https://www.balldontlie.io/api/v1/games?dates[]={today}"
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
         games = [f"{game['home_team']['full_name']} vs {game['visitor_team']['full_name']}" for game in data['data']]
-        return games
-    return ["No games available"]
+        return games if games else ["No games found for today"]
+    return ["Error retrieving games"]
 
 # Display NBA Games on the Left
 st.sidebar.title("Today's NBA Games")
