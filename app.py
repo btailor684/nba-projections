@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 from datetime import datetime, timedelta
+from bs4 import BeautifulSoup
 
 # Title
 st.title("NBA Profitable Player Props & Betting Tool")
@@ -28,46 +29,36 @@ def get_nba_games():
         st.error(f"Failed to fetch games: {e}")
         return []
 
-# Function to Fetch Player Stats from an Alternative Reliable Source
-@st.cache_data
-def get_player_trends(player_name):
+# Function to Scrape Player Props from a Sportsbook (FanDuel)
+def scrape_sportsbook_props():
     try:
-        url = f"https://api.sportsdata.io/v3/nba/stats/json/PlayerGameStatsByDate/{datetime.today().strftime('%Y-%m-%d')}?key=YOUR_SPORTSDATA_API_KEY"
-        response = requests.get(url)
+        url = "https://sportsbook.fanduel.com/navigation/nba"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        response = requests.get(url, headers=headers)
         if response.status_code == 200:
-            data = response.json()
-            player_data = next((p for p in data if p["Name"] == player_name), None)
-            if player_data:
-                return {
-                    "points": player_data["Points"],
-                    "rebounds": player_data["Rebounds"],
-                    "assists": player_data["Assists"]
-                }
-        return None
+            soup = BeautifulSoup(response.text, 'html.parser')
+            player_props = []
+            for item in soup.find_all("div", class_="market__title"):
+                prop_name = item.get_text(strip=True)
+                player_props.append(prop_name)
+            return player_props[:10]  # Return top 10 most popular props
     except Exception as e:
-        st.error(f"Failed to fetch player stats: {e}")
-        return None
+        st.error(f"Failed to fetch sportsbook props: {e}")
+        return []
 
-# Function to Generate Profitable Player Props
+# Function to Generate Profitable Player Props Based on Today's Games
 @st.cache_data
 def get_profitable_props():
     props = []
     for game in get_nba_games():
         for team in [game["team1"], game["team2"]]:
-            url = f"https://api.sportsdata.io/v3/nba/scores/json/PlayersBasic/{team.replace(' ', '')}?key=YOUR_SPORTSDATA_API_KEY"
-            response = requests.get(url)
-            if response.status_code == 200:
-                team_data = response.json()
-                for player in team_data[:4]:  # Pick top 4 key players
-                    stats = get_player_trends(player["Name"])
-                    if stats:
-                        props.append({
-                            "player": player["Name"],
-                            "team": team,
-                            "prop": f"Over {round(stats['points']+2,1)} Points" if stats["points"] else "Over 20.5 Points",
-                            "prop_reb": f"Over {round(stats['rebounds']+1,1)} Rebounds" if stats["rebounds"] else "Over 5.5 Rebounds",
-                            "prop_ast": f"Over {round(stats['assists']+1,1)} Assists" if stats["assists"] else "Over 4.5 Assists"
-                        })
+            scraped_props = scrape_sportsbook_props()
+            for prop in scraped_props:
+                props.append({
+                    "player": prop.split(" ")[0],
+                    "team": team,
+                    "prop": prop
+                })
     return props
 
 # Display NBA Games on the Left
@@ -80,12 +71,12 @@ else:
     st.sidebar.write("No games found for today")
 
 # Display Profitable Player Props
-st.subheader("Profitable Player Props for Today's Games")
+st.subheader("Top 5 Profitable Player Props for Today")
 player_props = get_profitable_props()
 selected_prop = None
 if player_props:
     selected_prop = st.selectbox("Select a Player Prop to Compare with Sportsbook:", [
-        f"{prop['player']} ({prop['team']}) - {prop['prop']}" for prop in player_props
+        f"{prop['player']} ({prop['team']}) - {prop['prop']}" for prop in player_props[:5]
     ])
 else:
     st.write("No player props found")
