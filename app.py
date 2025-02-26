@@ -29,22 +29,35 @@ def get_nba_games():
         st.error(f"Failed to fetch games: {e}")
         return []
 
-# Function to Scrape Player Props from a Sportsbook (FanDuel)
+# Function to Scrape Player Props from Sportsbooks (DraftKings & BetMGM)
 def scrape_sportsbook_props():
+    props = []
     try:
-        url = "https://sportsbook.fanduel.com/navigation/nba"
+        # DraftKings Scraping
+        dk_url = "https://sportsbook.draftkings.com/leagues/basketball/nba"
         headers = {"User-Agent": "Mozilla/5.0"}
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'html.parser')
-            player_props = []
-            for item in soup.find_all("div", class_="market__title"):
+        dk_response = requests.get(dk_url, headers=headers)
+        if dk_response.status_code == 200:
+            dk_soup = BeautifulSoup(dk_response.text, 'html.parser')
+            for item in dk_soup.find_all("div", class_="sportsbook-event-accordion__title"):
                 prop_name = item.get_text(strip=True)
-                player_props.append(prop_name)
-            return player_props[:10]  # Return top 10 most popular props
+                props.append(prop_name)
     except Exception as e:
-        st.error(f"Failed to fetch sportsbook props: {e}")
-        return []
+        st.error(f"Failed to fetch DraftKings props: {e}")
+    
+    try:
+        # BetMGM Scraping
+        mgm_url = "https://sports.betmgm.com/en/sports/basketball-7/betting/usa-9/nba-600036"
+        mgm_response = requests.get(mgm_url, headers=headers)
+        if mgm_response.status_code == 200:
+            mgm_soup = BeautifulSoup(mgm_response.text, 'html.parser')
+            for item in mgm_soup.find_all("span", class_="option-name"):
+                prop_name = item.get_text(strip=True)
+                props.append(prop_name)
+    except Exception as e:
+        st.error(f"Failed to fetch BetMGM props: {e}")
+    
+    return props[:10]  # Return top 10 most popular props
 
 # Function to Generate Profitable Player Props Based on Today's Games
 @st.cache_data
