@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
-from datetime import datetime, timedelta
-from bs4 import BeautifulSoup
+from datetime import datetime
 
 # Title
 st.title("NBA Profitable Player Props & Betting Tool")
@@ -20,6 +19,7 @@ def get_nba_games():
                         "matchup": f"{game['competitions'][0]['competitors'][0]['team']['displayName']} vs {game['competitions'][0]['competitors'][1]['team']['displayName']}",
                         "team1": game['competitions'][0]['competitors'][0]['team']['displayName'],
                         "team2": game['competitions'][0]['competitors'][1]['team']['displayName'],
+                        "game_id": game["id"]
                     }
                     for game in data['events']
                 ]
@@ -29,80 +29,68 @@ def get_nba_games():
         st.error(f"Failed to fetch games: {e}")
         return []
 
-# Function to Scrape Player Props from Sportsbooks (DraftKings & BetMGM)
-def scrape_sportsbook_props():
-    props = []
-    try:
-        # DraftKings Scraping
-        dk_url = "https://sportsbook.draftkings.com/leagues/basketball/nba"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        dk_response = requests.get(dk_url, headers=headers)
-        if dk_response.status_code == 200:
-            dk_soup = BeautifulSoup(dk_response.text, 'html.parser')
-            for item in dk_soup.find_all("div", class_="sportsbook-event-accordion__title"):
-                prop_name = item.get_text(strip=True)
-                props.append(prop_name)
-    except Exception as e:
-        st.error(f"Failed to fetch DraftKings props: {e}")
-    
-    try:
-        # BetMGM Scraping
-        mgm_url = "https://sports.betmgm.com/en/sports/basketball-7/betting/usa-9/nba-600036"
-        mgm_response = requests.get(mgm_url, headers=headers)
-        if mgm_response.status_code == 200:
-            mgm_soup = BeautifulSoup(mgm_response.text, 'html.parser')
-            for item in mgm_soup.find_all("span", class_="option-name"):
-                prop_name = item.get_text(strip=True)
-                props.append(prop_name)
-    except Exception as e:
-        st.error(f"Failed to fetch BetMGM props: {e}")
-    
-    return props[:10]  # Return top 10 most popular props
-
-# Function to Generate Profitable Player Props Based on Today's Games
+# Function to Generate Player Props Based on Projections
 @st.cache_data
-def get_profitable_props():
-    props = []
-    for game in get_nba_games():
-        for team in [game["team1"], game["team2"]]:
-            scraped_props = scrape_sportsbook_props()
-            for prop in scraped_props:
-                props.append({
-                    "player": prop.split(" ")[0],
-                    "team": team,
-                    "prop": prop
-                })
-    return props
+def get_player_props(game_id):
+    try:
+        url = f"https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/events/{game_id}/competitions/"
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            players_props = []
+            for team in data["competitions"][0]["competitors"]:
+                team_name = team["team"]["displayName"]
+                for athlete in team["athletes"]:
+                    players_props.append({
+                        "player": athlete["displayName"],
+                        "team": team_name,
+                        "points": f"Projected Over {athlete.get('statistics', {}).get('points', 'N/A')} Points",
+                        "rebounds": f"Projected Over {athlete.get('statistics', {}).get('rebounds', 'N/A')} Rebounds",
+                        "assists": f"Projected Over {athlete.get('statistics', {}).get('assists', 'N/A')} Assists"
+                    })
+            return players_props
+    except Exception as e:
+        st.error(f"Failed to fetch player props: {e}")
+        return []
 
 # Display NBA Games on the Left
 st.sidebar.title("Today's NBA Games")
 nba_games = get_nba_games()
+selected_game = None
 if nba_games:
-    for game in nba_games:
-        st.sidebar.write(game["matchup"])
+    selected_game = st.sidebar.selectbox("Select a Game:", nba_games, format_func=lambda x: x["matchup"])
 else:
     st.sidebar.write("No games found for today")
 
-# Display Profitable Player Props
-st.subheader("Top 5 Profitable Player Props for Today")
-player_props = get_profitable_props()
-selected_prop = None
-if player_props:
-    selected_prop = st.selectbox("Select a Player Prop to Compare with Sportsbook:", [
-        f"{prop['player']} ({prop['team']}) - {prop['prop']}" for prop in player_props[:5]
-    ])
-else:
-    st.write("No player props found")
+# Display Player Props for Selected Game
+if selected_game:
+    st.subheader(f"Player Props for {selected_game['matchup']}")
+    player_props = get_player_props(selected_game["game_id"])
+    if player_props:
+        for prop in player_props:
+            st.write(f"**{prop['player']} ({prop['team']})**")
+            st.write(f"- {prop['points']}")
+            st.write(f"- {prop['rebounds']}")
+            st.write(f"- {prop['assists']}")
+            st.write("---")
+    else:
+        st.write("No player props found for this game")
 
-# User Input - Sportsbook Odds for Selected Prop
-if selected_prop:
-    st.subheader("Compare with Sportsbook Lines")
-    sportsbook_line = st.number_input("Enter Sportsbook Line for Selected Prop:", value=0.0)
+# User Input - Sportsbook Odds for Selected Player
+st.subheader("Compare with Sportsbook Lines")
+selected_player = st.selectbox("Select a Player to Compare:", [p['player'] for p in player_props] if player_props else [])
+if selected_player:
+    sportsbook_points = st.number_input("Enter Sportsbook Line for Points:", value=0.0)
+    sportsbook_rebounds = st.number_input("Enter Sportsbook Line for Rebounds:", value=0.0)
+    sportsbook_assists = st.number_input("Enter Sportsbook Line for Assists:", value=0.0)
     
-    # Extract Expected Projection
-    expected_projection = float(selected_prop.split()[-2])
-    
-    # Basic Comparison Logic
-    recommended_bet = "BET OVER" if sportsbook_line < expected_projection else "NO BET"
-    
-    st.write(f"Recommendation: **{recommended_bet}**")
+    player_data = next((p for p in player_props if p['player'] == selected_player), None)
+    if player_data:
+        def compare_prop(sportsbook_line, projected):
+            projected_value = float(projected.split()[-2]) if projected.split()[-2].replace('.', '', 1).isdigit() else 0
+            return "BET OVER" if sportsbook_line < projected_value else "NO BET"
+        
+        st.write(f"**Recommendation for {selected_player}:**")
+        st.write(f"- Points: {compare_prop(sportsbook_points, player_data['points'])}")
+        st.write(f"- Rebounds: {compare_prop(sportsbook_rebounds, player_data['rebounds'])}")
+        st.write(f"- Assists: {compare_prop(sportsbook_assists, player_data['assists'])}")
