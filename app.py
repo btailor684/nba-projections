@@ -39,7 +39,12 @@ def fetch_active_players(team_id):
         response = requests.get(url, headers=HEADERS)
         if response.status_code == 200:
             data = response.json()
-            return [f"{player['first_name']} {player['last_name']}" for player in data.get("data", [])]
+            active_players = [
+                f"{player['first_name']} {player['last_name']}" 
+                for player in data.get("data", []) 
+                if player.get("id") and player.get("first_name") and player.get("last_name")
+            ]
+            return active_players
         return []
     except:
         return []
@@ -65,7 +70,7 @@ def fetch_player_stats(player_id):
     url = "https://api.balldontlie.io/v1/season_averages"
     params = {
         "season": 2024,
-        "player_ids": player_id  # Ensure correct format
+        "player_ids[]": player_id  # Ensure correct format
     }
     try:
         response = requests.get(url, headers=HEADERS, params=params)
@@ -100,11 +105,14 @@ if selected_game_data and "No games" not in selected_game and "Error" not in sel
     st.subheader(f"Player Props for {selected_game}")
     st.write(f"🔍 Debug - API Response Status: 200")
     
-    # Fetch active players
+    # Fetch only **active** players for **selected game**
     home_team_players = fetch_active_players(selected_game_data["home_team"])
     away_team_players = fetch_active_players(selected_game_data["away_team"])
-    all_players = home_team_players + away_team_players
     
+    # Remove duplicates and empty values
+    all_players = list(set(home_team_players + away_team_players))
+    all_players = sorted([p for p in all_players if p])  # Sort alphabetically
+
     selected_player = st.selectbox("Select a Player", all_players)
     
     if selected_player:
