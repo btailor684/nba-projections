@@ -1,6 +1,6 @@
 import streamlit as st
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # API Key for balldontlie.io
 API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
@@ -34,10 +34,13 @@ def fetch_nba_games():
             if "data" in data:
                 games = []
                 for game in data["data"]:
-                    # Extract proper game time if available
-                    game_time = game.get("datetime", "Unknown Time")
-                    if game_time != "Unknown Time":
-                        game_time = datetime.strptime(game_time, "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%B %d, %Y - %I:%M %p ET")
+                    # Extract and format proper game time
+                    game_time = game.get("datetime", None)
+                    if game_time:
+                        game_time = datetime.strptime(game_time, "%Y-%m-%dT%H:%M:%S.%fZ") - timedelta(hours=5)  # Convert to EST
+                        game_time = game_time.strftime("%B %d, %Y - %I:%M %p EST")
+                    else:
+                        game_time = "Time Unavailable"
 
                     games.append({
                         "matchup": f"{game['home_team']['full_name']} vs {game['visitor_team']['full_name']}",
@@ -63,7 +66,6 @@ def fetch_active_players(team_id):
                 "name": f"{player['first_name']} {player['last_name']}",
                 "position": player.get("position", "N/A"),
                 "team": player.get("team", {}).get("full_name", "Unknown"),
-                "image": f"https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/{player['id']}.png"  # More reliable NBA headshots
             } for player in data.get("data", [])]
         return []
     except:
@@ -79,13 +81,13 @@ selected_game_data = next((game for game in games if game["matchup"] == selected
 # Main Content
 if selected_game_data:
     st.subheader(f"Players for {selected_game}")
-    st.write(f"🕒 Game Time: **{selected_game_data['game_time']}**")  # Fix game time display
-    
+    st.write(f"🕒 Game Time: **{selected_game_data['game_time']}**")  # Fixed Game Time
+
     # Fetch active players
     home_team_players = fetch_active_players(selected_game_data["home_team"])
     away_team_players = fetch_active_players(selected_game_data["away_team"])
     all_players = home_team_players + away_team_players
-    
+
     if all_players:
         st.write("### Players in this game:")
         
@@ -94,12 +96,11 @@ if selected_game_data:
         
         filtered_players = [p for p in all_players if search_query.lower() in p["name"].lower()] if search_query else all_players
         
-        # Display as Table
+        # Display as Table (Removed Image Column)
         player_table = [{
             "Player": p["name"],
             "Position": p["position"],
-            "Team": p["team"],
-            "Image": f"![img]({p['image']})"
+            "Team": p["team"]
         } for p in filtered_players]
         
         st.table(player_table)
