@@ -48,14 +48,13 @@ def fetch_active_players(team_id):
 def get_player_id(player_name):
     url = "https://api.balldontlie.io/v1/players"
     try:
-        response = requests.get(url, headers=HEADERS, params={"search": player_name, "per_page": 5})
+        response = requests.get(url, headers=HEADERS, params={"search": player_name, "per_page": 10})
         if response.status_code == 200:
             data = response.json()
-            if "data" in data and len(data["data"]) > 0:
-                for player in data["data"]:
-                    if player["first_name"] + " " + player["last_name"] == player_name:
-                        return player["id"]
-            st.write(f"⚠️ Player ID not found for {player_name}")
+            for player in data.get("data", []):
+                if f"{player['first_name']} {player['last_name']}".lower() == player_name.lower():
+                    return player["id"]
+        st.write(f"⚠️ Player ID not found for {player_name}")
         return None
     except Exception as e:
         st.write(f"❌ Error retrieving player ID: {str(e)}")
@@ -66,7 +65,7 @@ def fetch_player_stats(player_id):
     url = "https://api.balldontlie.io/v1/season_averages"
     params = {
         "season": 2024,
-        "player_ids[]": player_id
+        "player_ids": player_id  # Ensure correct format
     }
     try:
         response = requests.get(url, headers=HEADERS, params=params)
