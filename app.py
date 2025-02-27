@@ -3,9 +3,9 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-# API Key (Always Keep This)
+# ✅ Ensure API Key is Set
 API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
-HEADERS = {"Authorization": API_KEY}
+HEADERS = {"Authorization": f"Bearer {API_KEY}"}  # Add 'Bearer' if required
 BASE_URL = "https://api.balldontlie.io/v1"
 
 # Function to fetch today's NBA games
@@ -32,6 +32,11 @@ def fetch_player_stats(player_id):
     
     st.write(f"🔍 Debug: Fetching Player Stats from API: [{url}]")  # Debugging Output
     
+    # ✅ Handle Unauthorized Error
+    if response.status_code == 401:
+        st.error("❌ API Unauthorized. Check your API key or plan.")
+        return None
+
     # Check if the response is JSON
     try:
         if response.status_code == 200:
