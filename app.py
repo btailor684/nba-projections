@@ -27,12 +27,17 @@ def fetch_active_players(team_id):
 
 # Function to fetch player season averages
 def fetch_player_stats(player_id):
-    url = f"{BASE_URL}/season_averages/general?season=2024&season_type=regular&type=base&player_ids[]={player_id}"
+    url = f"{BASE_URL}/season_averages/general?season=2024&season_type=regular&type=base&player_ids={player_id}"
     response = requests.get(url, headers=HEADERS)
+    
+    st.write(f"🔍 Debug: Fetching Player Stats from API: [{url}]")  # Debugging Output
     
     if response.status_code == 200:
         stats = response.json().get("data", [])
+        st.write(f"📊 Debug: API Response: {stats}")  # Print API response for debugging
         return stats[0] if stats else None
+    else:
+        st.write(f"❌ Debug: API Error - {response.json()}")  # Print error if request fails
     return None
 
 # Streamlit UI
