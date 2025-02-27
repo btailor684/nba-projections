@@ -16,7 +16,7 @@ st.sidebar.markdown("View today's NBA games, players, and stats.")
 # --- Fetch Daily NBA Games ---
 def fetch_nba_games():
     today = datetime.today().strftime('%Y-%m-%d')
-    url = f"https://api.balldontlie.io/v1/games?start_date={today}&end_date={today}"
+    url = f"https://api.balldontlie.io/v1/games?dates[]={today}"
     try:
         response = requests.get(url, headers=HEADERS)
         if response.status_code == 200:
@@ -79,6 +79,12 @@ st.markdown("View today's NBA games, players, and stats.")
 # Fetch NBA games
 games = fetch_nba_games()
 game_options = [game["matchup"] for game in games]
+
+# If no games found
+if not games:
+    st.error("⚠️ No games found for today. Please check back later.")
+    st.stop()
+
 selected_game = st.sidebar.selectbox("Select a Game", game_options)
 
 # Get selected game data
