@@ -32,12 +32,17 @@ def fetch_player_stats(player_id):
     
     st.write(f"🔍 Debug: Fetching Player Stats from API: [{url}]")  # Debugging Output
     
-    if response.status_code == 200:
-        stats = response.json().get("data", [])
-        st.write(f"📊 Debug: API Response: {stats}")  # Print API response for debugging
-        return stats[0] if stats else None
-    else:
-        st.write(f"❌ Debug: API Error - {response.json()}")  # Print error if request fails
+    # Check if the response is JSON
+    try:
+        if response.status_code == 200:
+            stats = response.json().get("data", [])
+            st.write(f"📊 Debug: API Response: {stats}")  # Print API response for debugging
+            return stats[0] if stats else None
+        else:
+            st.write(f"❌ Debug: API Error - {response.status_code}: {response.text}")  # Print HTTP error
+    except requests.exceptions.JSONDecodeError:
+        st.write("❌ Error: API did not return valid JSON.")
+    
     return None
 
 # Streamlit UI
