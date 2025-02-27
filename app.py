@@ -3,55 +3,42 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-# ✅ Ensure API Key is Set
-API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"  # Ensure this key is correct
-HEADERS = {"Authorization": f"Bearer {API_KEY}"}  # 'Bearer' added for security
+# API Key (Ensure this remains set at all times)
+API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"  # Keep your API key here
+HEADERS = {"Authorization": API_KEY}
 BASE_URL = "https://api.balldontlie.io/v1"
 
 # Function to fetch today's NBA games
 def fetch_games():
     today = datetime.now().strftime("%Y-%m-%d")
-    url = f"{BASE_URL}/games?dates[]={today}&per_page=100"
+    url = f"{BASE_URL}/games?dates[]={today}"
     response = requests.get(url, headers=HEADERS)
-
     if response.status_code == 200:
         return response.json()["data"]
-    
-    st.error(f"❌ API Error ({response.status_code}): {response.text}")  # Debugging Output
     return []
 
 # Function to fetch active players for a selected game
 def fetch_active_players(team_id):
-    url = f"{BASE_URL}/players?team_ids[]={team_id}&per_page=100"
+    url = f"{BASE_URL}/players/active?team_ids[]={team_id}&per_page=100"
     response = requests.get(url, headers=HEADERS)
-
     if response.status_code == 200:
         return response.json()["data"]
-    
-    st.error(f"❌ API Error ({response.status_code}): {response.text}")  # Debugging Output
     return []
 
-# Function to fetch player season averages
+# Function to fetch season averages for a player
 def fetch_player_stats(player_id):
-    url = f"{BASE_URL}/season_averages?season=2024&player_ids[]={player_id}"
+    url = f"{BASE_URL}/season_averages/general?season=2024&season_type=regular&type=base&player_ids={player_id}"
     response = requests.get(url, headers=HEADERS)
-
-    st.write(f"🔍 Debug: Fetching Player Stats from API: [{url}]")  # Debugging URL
     
-    if response.status_code == 401:
-        st.error("❌ API Unauthorized. Check your API key or plan.")
-        return None
-    
-    try:
-        if response.status_code == 200:
-            stats = response.json().get("data", [])
-            return stats[0] if stats else None
+    if response.status_code == 200:
+        data = response.json().get("data", [])
+        if data:
+            return data[0]  # Return the first entry (should be only one)
         else:
-            st.error(f"❌ API Error ({response.status_code}): {response.text}")  # Debugging Output
-    except requests.exceptions.JSONDecodeError:
-        st.error("❌ API did not return valid JSON.")
-    
-    return None
+            return None  # No stats found for player
+    else:
+        st.error(f"❌ API Error: {response.status_code} - {response.json()}")
+        return None
 
 # Streamlit UI
 st.sidebar.title("🏀 Today's NBA Games")
@@ -89,7 +76,7 @@ if selected_game:
             stats = fetch_player_stats(player_id)
             
             if stats:
-                st.table(pd.DataFrame([stats]))
+                st.table(pd.DataFrame([stats]))  # Display stats in table format
             else:
                 st.warning("⚠️ No stats available for this player.")
     else:
