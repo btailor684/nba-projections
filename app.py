@@ -4,49 +4,52 @@ import pandas as pd
 from datetime import datetime
 
 # ✅ Ensure API Key is Set
-API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
-HEADERS = {"Authorization": f"Bearer {API_KEY}"}  # Add 'Bearer' if required
+API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"  # Ensure this key is correct
+HEADERS = {"Authorization": f"Bearer {API_KEY}"}  # 'Bearer' added for security
 BASE_URL = "https://api.balldontlie.io/v1"
 
 # Function to fetch today's NBA games
 def fetch_games():
     today = datetime.now().strftime("%Y-%m-%d")
-    url = f"{BASE_URL}/games?dates[]={today}"
+    url = f"{BASE_URL}/games?dates[]={today}&per_page=100"
     response = requests.get(url, headers=HEADERS)
+
     if response.status_code == 200:
         return response.json()["data"]
+    
+    st.error(f"❌ API Error ({response.status_code}): {response.text}")  # Debugging Output
     return []
 
 # Function to fetch active players for a selected game
 def fetch_active_players(team_id):
-    url = f"{BASE_URL}/players/active?team_ids[]={team_id}&per_page=100"
+    url = f"{BASE_URL}/players?team_ids[]={team_id}&per_page=100"
     response = requests.get(url, headers=HEADERS)
+
     if response.status_code == 200:
         return response.json()["data"]
+    
+    st.error(f"❌ API Error ({response.status_code}): {response.text}")  # Debugging Output
     return []
 
 # Function to fetch player season averages
 def fetch_player_stats(player_id):
-    url = f"{BASE_URL}/season_averages/general?season=2024&season_type=regular&type=base&player_ids={player_id}"
+    url = f"{BASE_URL}/season_averages?season=2024&player_ids[]={player_id}"
     response = requests.get(url, headers=HEADERS)
+
+    st.write(f"🔍 Debug: Fetching Player Stats from API: [{url}]")  # Debugging URL
     
-    st.write(f"🔍 Debug: Fetching Player Stats from API: [{url}]")  # Debugging Output
-    
-    # ✅ Handle Unauthorized Error
     if response.status_code == 401:
         st.error("❌ API Unauthorized. Check your API key or plan.")
         return None
-
-    # Check if the response is JSON
+    
     try:
         if response.status_code == 200:
             stats = response.json().get("data", [])
-            st.write(f"📊 Debug: API Response: {stats}")  # Print API response for debugging
             return stats[0] if stats else None
         else:
-            st.write(f"❌ Debug: API Error - {response.status_code}: {response.text}")  # Print HTTP error
+            st.error(f"❌ API Error ({response.status_code}): {response.text}")  # Debugging Output
     except requests.exceptions.JSONDecodeError:
-        st.write("❌ Error: API did not return valid JSON.")
+        st.error("❌ API did not return valid JSON.")
     
     return None
 
