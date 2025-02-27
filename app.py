@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 from datetime import datetime
 
-# Set API Key (YOUR API KEY IS NOW ALWAYS INCLUDED)
+# Set API Key (ALWAYS INCLUDED)
 API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
 HEADERS = {"Authorization": API_KEY}
 
@@ -45,6 +45,16 @@ def fetch_active_players(team_id):
         return players
     return []
 
+# --- Fetch Player Stats ---
+def fetch_player_stats(player_id):
+    url = f"https://api.balldontlie.io/v1/season_averages?season=2024&player_ids[]={player_id}"
+    response = requests.get(url, headers=HEADERS)
+    
+    if response.status_code == 200:
+        stats = response.json().get("data", [])
+        return stats[0] if stats else None
+    return None
+
 # Fetch games for today
 games = fetch_nba_games()
 
@@ -71,18 +81,28 @@ if selected_game_data:
     all_players = home_players + away_players
 
     if all_players:
-        # Create a table
-        player_data = [
-            {
-                "Player": f"{player['first_name']} {player['last_name']}",
-                "Position": player["position"],
-                "Team": player["team"]["full_name"]
-            }
-            for player in all_players
-        ]
-        
-        # Display Player Table
-        st.table(player_data)
+        # Create a dropdown to select a player
+        player_names = {f"{p['first_name']} {p['last_name']}": p['id'] for p in all_players}
+        selected_player_name = st.selectbox("Select a Player", list(player_names.keys()))
+
+        # Fetch and display player stats
+        if selected_player_name:
+            player_id = player_names[selected_player_name]
+            st.markdown(f"🔍 Fetching stats for: **{selected_player_name} (ID: {player_id})**")
+            
+            player_stats = fetch_player_stats(player_id)
+            if player_stats:
+                st.table({
+                    "Stat": ["Games Played", "Points Per Game", "Assists Per Game", "Rebounds Per Game"],
+                    "Value": [
+                        player_stats.get("games_played", "N/A"),
+                        player_stats.get("pts", "N/A"),
+                        player_stats.get("ast", "N/A"),
+                        player_stats.get("reb", "N/A"),
+                    ]
+                })
+            else:
+                st.warning("⚠️ No stats available for this player.")
     else:
         st.warning("⚠️ No active players found for this game.")
 else:
