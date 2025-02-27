@@ -2,108 +2,74 @@ import streamlit as st
 import requests
 from datetime import datetime
 
-# API Key for balldontlie.io
-API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
-HEADERS = {"Authorization": API_KEY}  # Ensure correct API authentication
+# API Configuration
+API_BASE_URL = "https://api.balldontlie.io/v1"
+API_KEY = "your_api_key_here"  # Replace with your actual API key
+HEADERS = {"Authorization": API_KEY}
 
-# App Title and Description
-st.set_page_config(page_title="PropEdge NBA", layout="wide")  # Set wide layout
-st.title("🏀 PropEdge NBA")
-st.markdown("View today's NBA games and players in each matchup.")
-
-# Dark Mode Toggle
-dark_mode = st.sidebar.toggle("🌙 Dark Mode")
-if dark_mode:
-    st.markdown("""
-        <style>
-        body {
-            background-color: #121212;
-            color: white;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-
-# Fetch Daily NBA Games
-def fetch_nba_games():
+# Fetch today's games
+def get_todays_games():
     today = datetime.today().strftime('%Y-%m-%d')
-    url = f"https://api.balldontlie.io/v1/games?start_date={today}&end_date={today}"
-    try:
-        response = requests.get(url, headers=HEADERS, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            if "data" in data:
-                games = [
-                    {
-                        "matchup": f"{game['home_team']['full_name']} vs {game['visitor_team']['full_name']}",
-                        "home_team": game['home_team']['id'],
-                        "away_team": game['visitor_team']['id'],
-                        "home_team_name": game['home_team']['full_name'],
-                        "away_team_name": game['visitor_team']['full_name'],
-                        "game_time": game.get('status', 'Time Unknown')
-                    }
-                    for game in data["data"]
-                ]
-                return games if games else []
-        return []
-    except Exception as e:
-        return []
+    url = f"{API_BASE_URL}/games?start_date={today}&end_date={today}"
+    response = requests.get(url, headers=HEADERS)
+    if response.status_code == 200:
+        return response.json().get("data", [])
+    return []
 
-# Fetch Active Players in Game
-def fetch_active_players(team_id):
-    url = f"https://api.balldontlie.io/v1/players/active?team_ids[]={team_id}&per_page=100"
-    try:
-        response = requests.get(url, headers=HEADERS)
-        if response.status_code == 200:
-            data = response.json()
-            return [{
-                "name": f"{player['first_name']} {player['last_name']}",
-                "position": player.get("position", "N/A"),
-                "team": player.get("team", {}).get("full_name", "Unknown"),
-                "image": f"https://nba-players.herokuapp.com/players/{player['last_name']}/{player['first_name']}"
-            } for player in data.get("data", [])]
-        return []
-    except:
-        return []
+# Fetch active players for a given team
+def get_active_players(team_id):
+    url = f"{API_BASE_URL}/players?team_ids[]={team_id}&per_page=100"
+    response = requests.get(url, headers=HEADERS)
+    if response.status_code == 200:
+        return response.json().get("data", [])
+    return []
 
-# Sidebar: Display Games
-st.sidebar.title("📅 Today's NBA Games")
-games = fetch_nba_games()
-game_options = [game["matchup"] for game in games]
-selected_game = st.sidebar.selectbox("Select a Game", game_options)
-selected_game_data = next((game for game in games if game["matchup"] == selected_game), None)
+# Fetch player stats
+def get_player_stats(player_id):
+    season = 2024  # Ensure the season is current
+    url = f"{API_BASE_URL}/season_averages?season={season}&player_ids={player_id}"
+    response = requests.get(url, headers=HEADERS)
+    if response.status_code == 200:
+        stats = response.json().get("data", [])
+        return stats[0] if stats else None
+    return None
 
-# Main Content
-if selected_game_data:
+# Streamlit UI
+st.sidebar.title("🏀 Today's NBA Games")
+st.sidebar.markdown("Select a Game")
+
+games = get_todays_games()
+game_options = {f"{g['home_team']['full_name']} vs {g['visitor_team']['full_name']}": g for g in games}
+selected_game = st.sidebar.selectbox("Select a Game", list(game_options.keys()) if game_options else ["No games available"])
+
+if selected_game in game_options:
+    game = game_options[selected_game]
+    st.title("🏀 PropEdge NBA")
+    st.markdown("View today's NBA games, players, and stats.")
+    
     st.subheader(f"Players for {selected_game}")
-    st.write(f"🕒 Game Time: {selected_game_data['game_time']}")
+    game_time = datetime.strptime(game["date"], "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%B %d, %Y - %I:%M %p ET")
+    st.markdown(f"⏳ **Game Time:** {game_time}")
     
-    # Fetch active players
-    home_team_players = fetch_active_players(selected_game_data["home_team"])
-    away_team_players = fetch_active_players(selected_game_data["away_team"])
-    all_players = home_team_players + away_team_players
+    team_ids = [game["home_team"]["id"], game["visitor_team"]["id"]]
+    players = [player for team_id in team_ids for player in get_active_players(team_id)]
     
-    if all_players:
-        st.write("### Players in this game:")
+    if players:
+        player_names = {f"{p['first_name']} {p['last_name']}": p["id"] for p in players}
+        selected_player = st.selectbox("Select a Player", list(player_names.keys()))
         
-        # Search Bar for Players
-        search_query = st.text_input("🔍 Search for a player...")
-        
-        filtered_players = [p for p in all_players if search_query.lower() in p["name"].lower()] if search_query else all_players
-        
-        # Display as Table
-        player_table = [{
-            "Player": p["name"],
-            "Position": p["position"],
-            "Team": p["team"],
-            "Image": f"![img]({p['image']})"
-        } for p in filtered_players]
-        
-        st.table(player_table)
+        if selected_player:
+            player_id = player_names[selected_player]
+            st.markdown(f"🔍 **Fetching stats for:** **{selected_player} (ID: {player_id})**")
+            
+            stats = get_player_stats(player_id)
+            if stats:
+                st.markdown("## Player Stats")
+                st.write(stats)
+            else:
+                st.warning("⚠️ No stats available for this player.")
     else:
-        st.write("❌ No active players found for this game.")
-else:
-    st.write("⚠️ No games available today.")
+        st.warning("⚠️ No active players found for this game.")
 
-# Footer
 st.markdown("---")
-st.write("Built with ❤️ for NBA fans | Data: balldontlie.io")
+st.markdown("Built with ❤️ for NBA fans | Data: balldontlie.io")
