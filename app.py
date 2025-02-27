@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-# API Key (Ensure this remains set at all times)
+# API Key (Always Keep This)
 API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
 HEADERS = {"Authorization": API_KEY}
 BASE_URL = "https://api.balldontlie.io/v1"
@@ -25,10 +25,11 @@ def fetch_active_players(team_id):
         return response.json()["data"]
     return []
 
-# Function to fetch player stats
+# Function to fetch player season averages
 def fetch_player_stats(player_id):
-    url = f"{BASE_URL}/season_averages?season=2024&player_ids={player_id}"
+    url = f"{BASE_URL}/season_averages/general?season=2024&season_type=regular&type=base&player_ids[]={player_id}"
     response = requests.get(url, headers=HEADERS)
+    
     if response.status_code == 200:
         stats = response.json().get("data", [])
         return stats[0] if stats else None
@@ -38,10 +39,6 @@ def fetch_player_stats(player_id):
 st.sidebar.title("🏀 Today's NBA Games")
 st.sidebar.write("View today's NBA games, players, and stats.")
 
-# Dark mode toggle
-dark_mode = st.sidebar.toggle("🌙 Dark Mode")
-
-# Fetch NBA games
 games = fetch_games()
 
 game_options = {f"{game['home_team']['full_name']} vs {game['visitor_team']['full_name']}": game for game in games}
