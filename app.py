@@ -3,7 +3,7 @@ import requests
 from datetime import datetime
 
 # API Configuration
-API_KEY = "your_api_key_here"
+API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
 HEADERS = {"Authorization": API_KEY}
 
 # Streamlit UI Enhancements
