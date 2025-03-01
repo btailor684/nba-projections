@@ -25,12 +25,12 @@ def fetch_active_players(team_id):
         return response.json()["data"]
     return []
 
-# Function to fetch last 10 games for a selected player
-def fetch_player_game_logs(player_id):
-    url = f"{BASE_URL}/stats?player_ids[]={player_id}&per_page=10"
+# Function to fetch last 10 games for a selected player (Filtered by 2024 Season)
+def fetch_recent_player_game_logs(player_id):
+    url = f"{BASE_URL}/stats?player_ids[]={player_id}&seasons[]=2024&per_page=10"
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
-        return response.json().get("data", [])
+        return sorted(response.json().get("data", []), key=lambda x: x["game"]["date"], reverse=True)
     return []
 
 # Streamlit UI
@@ -72,12 +72,12 @@ if selected_game:
             st.write(f"- **College:** {player_info.get('college', 'N/A')}")
             st.write(f"- **Country:** {player_info.get('country', 'N/A')}")
 
-            # Fetch and Display Last 10 Games
+            # Fetch and Display Last 10 Games (Sorted by Most Recent)
             st.subheader(f"📈 Last 10 Games for {selected_player_name}")
-            game_logs = fetch_player_game_logs(player_id)
+            game_logs = fetch_recent_player_game_logs(player_id)
             
             if game_logs:
-                # Create a DataFrame
+                # Create a DataFrame with the latest stats
                 game_log_df = pd.DataFrame([
                     {
                         "Date": game["game"]["date"],
