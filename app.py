@@ -35,13 +35,20 @@ def fetch_player_season_averages(player_id):
         return stats[0] if stats else None
     return None
 
-# Function to fetch last 10 game logs
+# Function to fetch last 10 game logs **(ENSURING MOST RECENT GAMES)**
 def fetch_recent_player_game_logs(player_id):
-    url = f"{BASE_URL}/stats?player_ids[]={player_id}&seasons[]=2024&per_page=10"
+    today = datetime.now().strftime("%Y-%m-%d")
+    url = f"{BASE_URL}/stats?player_ids[]={player_id}&seasons[]=2024&per_page=50"
     response = requests.get(url, headers=HEADERS)
     
     if response.status_code == 200:
-        return response.json().get("data", [])
+        games = response.json().get("data", [])
+        # **Filter games that have already been played**
+        completed_games = [game for game in games if game["game"]["date"] < today]
+        # **Sort games by most recent first**
+        completed_games.sort(key=lambda x: x["game"]["date"], reverse=True)
+        # **Return only the last 10 games**
+        return completed_games[:10]
     return []
 
 # Streamlit UI
@@ -102,7 +109,7 @@ if selected_game:
                 game_log_df = pd.DataFrame([
                     {
                         "Date": game["game"]["date"],
-                        "Opponent": game["game"].get("visitor_team", {}).get("full_name", "Unknown") if game["game"].get("home_team_id") == home_team["id"] else game["game"].get("home_team", {}).get("full_name", "Unknown"),
+                        "Opponent": game["game"]["visitor_team"]["full_name"] if game["game"]["home_team_id"] == home_team["id"] else game["game"]["home_team"]["full_name"],
                         "Points": game.get("pts", 0),
                         "Rebounds": game.get("reb", 0),
                         "Assists": game.get("ast", 0),
