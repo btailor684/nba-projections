@@ -27,17 +27,18 @@ def fetch_active_players(team_id):
     st.error(f"Failed to fetch players: {response.json()}")
     return []
 
-# ✅ FIXED: Function to fetch player season averages (Corrected Player ID Format)
+# ✅ FIXED: Function to fetch player season averages (Proper Formatting)
 def fetch_player_season_averages(player_id):
     url = f"{BASE_URL}/season_averages/general?season=2024&season_type=regular&type=base&player_ids[]={player_id}"
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
         stats = response.json().get("data", [])
-        return stats[0] if stats else None
+        if stats:
+            return {k: v for k, v in stats[0].items() if isinstance(v, (int, float))}
     st.error(f"Failed to fetch season averages: {response.json()}")
     return None
 
-# ✅ FIXED: Function to fetch last 10 game logs for a player (Corrected Opponent Data)
+# ✅ FIXED: Function to fetch last 10 game logs for a player
 def fetch_recent_player_game_logs(player_id):
     url = f"{BASE_URL}/stats?player_ids[]={player_id}&per_page=10&sort=game.date&order=desc"
     response = requests.get(url, headers=HEADERS)
@@ -45,20 +46,24 @@ def fetch_recent_player_game_logs(player_id):
         data = response.json().get("data", [])
         cleaned_logs = []
         for game in data:
-            home_team = game["game"]["home_team"]
-            visitor_team = game["game"]["visitor_team"]
-            opponent = visitor_team["full_name"] if game["game"]["home_team_id"] == home_team["id"] else home_team["full_name"]
-            
-            game_data = {
-                "Date": game["game"]["date"],
-                "Opponent": opponent,
-                "Points": game.get("pts", "N/A"),
-                "Rebounds": game.get("reb", "N/A"),
-                "Assists": game.get("ast", "N/A"),
-                "Minutes": game.get("min", "N/A"),
-                "FG%": game.get("fg_pct", "N/A"),
-            }
-            cleaned_logs.append(game_data)
+            try:
+                home_team = game["game"].get("home_team", {})
+                visitor_team = game["game"].get("visitor_team", {})
+
+                opponent = visitor_team["full_name"] if game["game"]["home_team_id"] == home_team.get("id") else home_team.get("full_name", "Unknown")
+                
+                game_data = {
+                    "Date": game["game"]["date"],
+                    "Opponent": opponent,
+                    "Points": game.get("pts", "N/A"),
+                    "Rebounds": game.get("reb", "N/A"),
+                    "Assists": game.get("ast", "N/A"),
+                    "Minutes": game.get("min", "N/A"),
+                    "FG%": game.get("fg_pct", "N/A"),
+                }
+                cleaned_logs.append(game_data)
+            except KeyError as e:
+                st.error(f"Game log error: Missing key {e}")
         return cleaned_logs
     st.error(f"Failed to fetch game logs: {response.json()}")
     return []
@@ -114,15 +119,16 @@ if selected_game:
             player_id = player_dict[selected_player]
             st.write(f"📊 Fetching stats for: **{selected_player} (ID: {player_id})**")
             
-            # ✅ Display Season Averages
+            # ✅ Display Season Averages (Cleaned Format)
             season_avg = fetch_player_season_averages(player_id)
             if season_avg:
                 st.subheader(f"📊 Season Averages for {selected_player}")
-                st.table(pd.DataFrame([season_avg]))
+                df_season_avg = pd.DataFrame([season_avg])
+                st.table(df_season_avg)
             else:
                 st.warning("⚠️ No season averages available for this player.")
             
-            # ✅ Display Last 10 Games
+            # ✅ Display Last 10 Games (Proper Opponent Extraction)
             game_logs = fetch_recent_player_game_logs(player_id)
             if game_logs:
                 df_logs = pd.DataFrame(game_logs)
