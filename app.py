@@ -14,7 +14,7 @@ def fetch_games():
     url = f"{BASE_URL}/games?dates[]={today}"
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
-        return response.json()["data"]
+        return response.json().get("data", [])
     return []
 
 # Function to fetch active players for a selected game
@@ -22,22 +22,24 @@ def fetch_active_players(team_id):
     url = f"{BASE_URL}/players/active?team_ids[]={team_id}&per_page=100"
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
-        return response.json()["data"]
+        return response.json().get("data", [])
     return []
 
-# Function to fetch player stats (Season Averages)
+# Function to fetch player season averages
 def fetch_player_season_averages(player_id):
-    url = f"{BASE_URL}/season_averages/general?season=2024&season_type=regular&type=base&player_ids={player_id}"
+    url = f"{BASE_URL}/season_averages/general?season=2024&season_type=regular&type=base&player_ids[]={player_id}"
     response = requests.get(url, headers=HEADERS)
+    
     if response.status_code == 200:
         stats = response.json().get("data", [])
         return stats[0] if stats else None
     return None
 
-# Function to fetch last 10 completed games for a player
+# Function to fetch last 10 game logs
 def fetch_recent_player_game_logs(player_id):
     url = f"{BASE_URL}/stats?player_ids[]={player_id}&seasons[]=2024&per_page=10"
     response = requests.get(url, headers=HEADERS)
+    
     if response.status_code == 200:
         return response.json().get("data", [])
     return []
@@ -100,12 +102,12 @@ if selected_game:
                 game_log_df = pd.DataFrame([
                     {
                         "Date": game["game"]["date"],
-                        "Opponent": game["game"]["visitor_team"]["full_name"] if game["game"]["home_team_id"] == home_team["id"] else game["game"]["home_team"]["full_name"],
-                        "Points": game["pts"],
-                        "Rebounds": game["reb"],
-                        "Assists": game["ast"],
-                        "Minutes": game["min"],
-                        "FG%": round((game["fg_pct"] * 100), 1) if game["fg_pct"] is not None else "N/A"
+                        "Opponent": game["game"].get("visitor_team", {}).get("full_name", "Unknown") if game["game"].get("home_team_id") == home_team["id"] else game["game"].get("home_team", {}).get("full_name", "Unknown"),
+                        "Points": game.get("pts", 0),
+                        "Rebounds": game.get("reb", 0),
+                        "Assists": game.get("ast", 0),
+                        "Minutes": game.get("min", "N/A"),
+                        "FG%": round((game["fg_pct"] * 100), 1) if game.get("fg_pct") is not None else "N/A"
                     } for game in game_logs
                 ])
                 
