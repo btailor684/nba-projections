@@ -27,20 +27,29 @@ def fetch_active_players(team_id):
     st.error(f"Failed to fetch players: {response.json()}")
     return []
 
-# ✅ FIXED: Function to fetch player season averages
+# ✅ FIXED: Function to fetch player season averages in readable form
 def fetch_player_season_averages(player_id):
     url = f"{BASE_URL}/season_averages/general?season=2024&season_type=regular&type=base&player_ids[]={player_id}"
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
         stats = response.json().get("data", [])
         if stats:
-            return {k: v for k, v in stats[0].items() if isinstance(v, (int, float))}
+            # Extract relevant stats
+            readable_stats = {
+                "Points": stats[0].get("pts", "N/A"),
+                "Rebounds": stats[0].get("reb", "N/A"),
+                "Assists": stats[0].get("ast", "N/A"),
+                "FG%": stats[0].get("fg_pct", "N/A"),
+                "Minutes": stats[0].get("min", "N/A")
+            }
+            return readable_stats
     st.warning(f"⚠️ No season averages found for player {player_id}.")
     return None
 
-# ✅ FIXED: Function to fetch last 10 game logs for a player (FORCING 2024 SEASON)
-def fetch_recent_player_game_logs(player_id):
-    start_date = (datetime.now() - timedelta(days=60)).strftime("%Y-%m-%d")  # Fetch games from last 60 days
+# ✅ FIXED: Function to fetch last 10 game logs (Backtracks from Game Date)
+def fetch_recent_player_game_logs(player_id, game_date):
+    # Convert game date to format & backtrack 10 games
+    start_date = (datetime.strptime(game_date, "%Y-%m-%d") - timedelta(days=60)).strftime("%Y-%m-%d")
     url = f"{BASE_URL}/stats?player_ids[]={player_id}&start_date={start_date}&per_page=10&sort=game.date&order=desc"
     
     response = requests.get(url, headers=HEADERS)
@@ -49,11 +58,8 @@ def fetch_recent_player_game_logs(player_id):
         cleaned_logs = []
         for game in data:
             try:
-                home_team = game["game"].get("home_team", {})
-                visitor_team = game["game"].get("visitor_team", {})
+                opponent = game["game"]["visitor_team"]["full_name"] if game["game"]["home_team_id"] != game["game"]["visitor_team"]["id"] else game["game"]["home_team"]["full_name"]
 
-                opponent = visitor_team["full_name"] if game["game"]["home_team_id"] == home_team.get("id") else home_team.get("full_name", "Unknown")
-                
                 game_data = {
                     "Date": game["game"]["date"],
                     "Opponent": opponent,
@@ -126,7 +132,7 @@ if selected_game:
                 df_season_avg = pd.DataFrame([season_avg])
                 st.table(df_season_avg)
             
-            game_logs = fetch_recent_player_game_logs(player_id)
+            game_logs = fetch_recent_player_game_logs(player_id, game_data["date"])
             if game_logs:
                 df_logs = pd.DataFrame(game_logs)
                 st.subheader(f"📊 Last 10 Games for {selected_player}")
