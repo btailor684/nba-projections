@@ -35,7 +35,7 @@ def fetch_player_season_averages(player_id):
         return stats[0] if stats else None
     return None
 
-# ✅ **Fixing Last 10 Game Logs & Opponent Name**
+# ✅ **Fixed Last 10 Game Logs & Opponent Name Extraction**
 def fetch_recent_player_game_logs(player_id):
     today = datetime.now().strftime("%Y-%m-%d")
     url = f"{BASE_URL}/stats?player_ids[]={player_id}&seasons[]=2024&per_page=50"
@@ -43,16 +43,24 @@ def fetch_recent_player_game_logs(player_id):
     
     if response.status_code == 200:
         games = response.json().get("data", [])
-        # **Filter completed games**
-        completed_games = [game for game in games if game["game"]["date"] < today]
-        # **Sort games by most recent**
+        completed_games = [
+            game for game in games 
+            if "game" in game and game["game"].get("date") < today
+        ]
+
+        # Sort games by most recent date
         completed_games.sort(key=lambda x: x["game"]["date"], reverse=True)
-        # **Fix opponent name extraction**
+
         for game in completed_games:
-            if "game" in game and "home_team_id" in game["game"]:
-                game["opponent"] = game["game"]["visitor_team"]["full_name"] if game["game"]["home_team_id"] == game["player"]["team_id"] else game["game"]["home_team"]["full_name"]
+            game_info = game.get("game", {})
+            home_team_id = game_info.get("home_team_id")
+            visitor_team_id = game_info.get("visitor_team_id")
+
+            if home_team_id and visitor_team_id:
+                game["opponent"] = game_info["visitor_team"]["full_name"] if home_team_id == game["player"]["team_id"] else game_info["home_team"]["full_name"]
             else:
                 game["opponent"] = "Unknown"
+
         return completed_games[:10]
     return []
 
@@ -114,7 +122,7 @@ if selected_game:
                 game_log_df = pd.DataFrame([
                     {
                         "Date": game["game"]["date"],
-                        "Opponent": game["opponent"],
+                        "Opponent": game.get("opponent", "Unknown"),
                         "Points": game.get("pts", 0),
                         "Rebounds": game.get("reb", 0),
                         "Assists": game.get("ast", 0),
