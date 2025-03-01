@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime
 
 # API Key (Ensure this remains set at all times)
-API_KEY = "YOUR_API_KEY_HERE"
+API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
 HEADERS = {"Authorization": API_KEY}
 BASE_URL = "https://api.balldontlie.io/v1"
 
