@@ -3,8 +3,8 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-# API Key (Ensure this remains set at all times)
-API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"  # Keep your API key here
+# API Key
+API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
 HEADERS = {"Authorization": API_KEY}
 BASE_URL = "https://api.balldontlie.io/v1"
 
@@ -25,27 +25,11 @@ def fetch_active_players(team_id):
         return response.json()["data"]
     return []
 
-# Function to fetch season averages for a player
-def fetch_player_stats(player_id):
-    url = f"{BASE_URL}/season_averages/general?season=2024&season_type=regular&type=base&player_ids={player_id}"
-    response = requests.get(url, headers=HEADERS)
-    
-    if response.status_code == 200:
-        data = response.json().get("data", [])
-        if data:
-            return data[0]  # Return the first entry (should be only one)
-        else:
-            return None  # No stats found for player
-    else:
-        st.error(f"❌ API Error: {response.status_code} - {response.json()}")
-        return None
-
 # Streamlit UI
 st.sidebar.title("🏀 Today's NBA Games")
-st.sidebar.write("View today's NBA games, players, and stats.")
+st.sidebar.write("View today's NBA games and players.")
 
 games = fetch_games()
-
 game_options = {f"{game['home_team']['full_name']} vs {game['visitor_team']['full_name']}": game for game in games}
 selected_game = st.sidebar.selectbox("Select a Game", list(game_options.keys()))
 
@@ -56,29 +40,26 @@ if selected_game:
     game_time = datetime.strptime(game_data["date"], "%Y-%m-%d").strftime("%B %d, %Y - 7:00 PM ET")
     
     st.title("🏀 PropEdge NBA")
-    st.write("View today's NBA games, players, and stats.")
     st.header(f"Players for {home_team['full_name']} vs {away_team['full_name']}")
     st.markdown(f"### 🕒 Game Time: **{game_time}**")
     
-    # Fetching players from both teams
+    # Fetch players from both teams
     players_home = fetch_active_players(home_team["id"])
     players_away = fetch_active_players(away_team["id"])
-    
     players = players_home + players_away
     
     if players:
-        player_dict = {f"{player['first_name']} {player['last_name']}": player["id"] for player in players}
-        selected_player = st.selectbox("Select a Player", list(player_dict.keys()))
+        player_dict = {f"{player['first_name']} {player['last_name']}": player for player in players}
+        selected_player_name = st.selectbox("Select a Player", list(player_dict.keys()))
         
-        if selected_player:
-            player_id = player_dict[selected_player]
-            st.write(f"📊 Fetching stats for: **{selected_player} (ID: {player_id})**")
-            stats = fetch_player_stats(player_id)
-            
-            if stats:
-                st.table(pd.DataFrame([stats]))  # Display stats in table format
-            else:
-                st.warning("⚠️ No stats available for this player.")
+        if selected_player_name:
+            player_info = player_dict[selected_player_name]
+            st.write(f"📊 **Player Details for: {selected_player_name}**")
+            st.write(f"- **Position:** {player_info.get('position', 'N/A')}")
+            st.write(f"- **Height:** {player_info.get('height', 'N/A')}")
+            st.write(f"- **Weight:** {player_info.get('weight', 'N/A')}")
+            st.write(f"- **College:** {player_info.get('college', 'N/A')}")
+            st.write(f"- **Country:** {player_info.get('country', 'N/A')}")
     else:
         st.warning("⚠️ No active players found for this game.")
 
