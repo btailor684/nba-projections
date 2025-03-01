@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-# API Key (Ensure this remains set at all times)
+# API Key (DO NOT REMOVE)
 API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
 HEADERS = {"Authorization": API_KEY}
 BASE_URL = "https://api.balldontlie.io/v1"
@@ -34,21 +34,47 @@ def fetch_player_season_averages(player_id):
         return stats[0] if stats else None
     return None
 
-# Function to fetch last 10 game logs for a player
+# Function to fetch last 10 recent game logs for a player
 def fetch_recent_player_game_logs(player_id):
     url = f"{BASE_URL}/stats?player_ids[]={player_id}&per_page=10&sort=game.date&order=desc"
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
-        return response.json().get("data", [])
+        games = response.json().get("data", [])
+        clean_games = []
+        for game in games:
+            clean_games.append({
+                "Date": game["game"]["date"],
+                "Opponent": game["game"]["visitor_team"]["full_name"] if game["game"]["home_team_id"] == game["team"]["id"] else game["game"]["home_team"]["full_name"],
+                "Points": game.get("pts", "N/A"),
+                "Rebounds": game.get("reb", "N/A"),
+                "Assists": game.get("ast", "N/A"),
+                "Minutes": game.get("min", "N/A"),
+                "FG%": round(game.get("fg_pct", 0) * 100, 1) if game.get("fg_pct") else "N/A"
+            })
+        return clean_games
     return []
 
-# Function to fetch betting odds
+# Function to fetch betting odds (FanDuel only)
 def fetch_betting_odds(game_id):
     url = f"{BASE_URL}/odds?game_id={game_id}&vendor=FanDuel"
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
-        return response.json().get("data", [])
-    return []
+        odds = response.json().get("data", [])
+        if odds:
+            for odd in odds:
+                if odd["type"] == "spread":
+                    favorite = "Home Team" if odd["spread"] < 0 else "Away Team"
+                    return {
+                        "Favorite": favorite,
+                        "Spread": odd["spread"],
+                        "Odds": odd["odds_decimal"]
+                    }
+                if odd["type"] == "over/under":
+                    return {
+                        "Total (O/U)": odd["over_under"],
+                        "Odds": odd["odds_decimal"]
+                    }
+    return {}
 
 # Streamlit UI
 st.sidebar.title("🏀 Today's NBA Games")
@@ -84,7 +110,6 @@ if selected_game:
             player_id = player_dict[selected_player]
             st.write(f"📊 Fetching stats for: **{selected_player} (ID: {player_id})**")
             
-            # Fetch Season Averages
             season_avg = fetch_player_season_averages(player_id)
             if season_avg:
                 st.subheader(f"📊 Season Averages for {selected_player}")
@@ -92,12 +117,9 @@ if selected_game:
             else:
                 st.warning("⚠️ No season averages available for this player.")
             
-            # Fetch Recent Game Logs
             game_logs = fetch_recent_player_game_logs(player_id)
             if game_logs:
                 df_logs = pd.DataFrame(game_logs)
-                df_logs = df_logs[["game", "pts", "reb", "ast", "min", "fg_pct"]]
-                df_logs.columns = ["Date", "Points", "Rebounds", "Assists", "Minutes", "FG%"]
                 st.subheader(f"📊 Last 10 Games for {selected_player}")
                 st.table(df_logs)
             else:
@@ -105,11 +127,10 @@ if selected_game:
     else:
         st.warning("⚠️ No active players found for this game.")
     
-    # Fetch Betting Odds
     betting_odds = fetch_betting_odds(game_id)
     if betting_odds:
         st.subheader(f"📈 Betting Odds for {selected_game}")
-        st.table(pd.DataFrame(betting_odds))
+        st.table(pd.DataFrame([betting_odds]))
     else:
         st.warning("⚠️ No betting odds available for this game.")
 
