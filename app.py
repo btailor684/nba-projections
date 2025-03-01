@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-# API Key
+# API Key (Ensure this remains set at all times)
 API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
 HEADERS = {"Authorization": API_KEY}
 BASE_URL = "https://api.balldontlie.io/v1"
@@ -25,15 +25,21 @@ def fetch_active_players(team_id):
         return response.json()["data"]
     return []
 
-# Function to fetch last 10 completed games for a selected player
-def fetch_recent_player_game_logs(player_id):
-    url = f"{BASE_URL}/stats?player_ids[]={player_id}&seasons[]=2024&per_page=50"
+# Function to fetch player stats (Season Averages)
+def fetch_player_season_averages(player_id):
+    url = f"{BASE_URL}/season_averages/general?season=2024&season_type=regular&type=base&player_ids={player_id}"
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
-        games = response.json().get("data", [])
-        completed_games = [g for g in games if g["game"]["status"] == "Final"]
-        sorted_games = sorted(completed_games, key=lambda x: x["game"]["date"], reverse=True)
-        return sorted_games[:10]  # Only return the latest 10 games
+        stats = response.json().get("data", [])
+        return stats[0] if stats else None
+    return None
+
+# Function to fetch last 10 completed games for a player
+def fetch_recent_player_game_logs(player_id):
+    url = f"{BASE_URL}/stats?player_ids[]={player_id}&seasons[]=2024&per_page=10"
+    response = requests.get(url, headers=HEADERS)
+    if response.status_code == 200:
+        return response.json().get("data", [])
     return []
 
 # Streamlit UI
@@ -68,15 +74,25 @@ if selected_game:
             player_id = player_info["id"]
             
             # Display Basic Info
-            st.write(f"📊 **Player Details for: {selected_player_name}**")
+            st.subheader(f"📊 Player Details for: {selected_player_name}")
             st.write(f"- **Position:** {player_info.get('position', 'N/A')}")
             st.write(f"- **Height:** {player_info.get('height', 'N/A')}")
             st.write(f"- **Weight:** {player_info.get('weight', 'N/A')}")
             st.write(f"- **College:** {player_info.get('college', 'N/A')}")
             st.write(f"- **Country:** {player_info.get('country', 'N/A')}")
 
+            # Fetch and Display Season Averages
+            st.subheader(f"📈 Season Averages for {selected_player_name}")
+            season_averages = fetch_player_season_averages(player_id)
+            
+            if season_averages:
+                season_df = pd.DataFrame([season_averages])
+                st.table(season_df)
+            else:
+                st.warning("⚠️ No season averages available for this player.")
+
             # Fetch and Display Last 10 Completed Games
-            st.subheader(f"📈 Last 10 Games for {selected_player_name}")
+            st.subheader(f"📊 Last 10 Games for {selected_player_name}")
             game_logs = fetch_recent_player_game_logs(player_id)
             
             if game_logs:
