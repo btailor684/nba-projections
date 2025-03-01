@@ -27,9 +27,9 @@ def fetch_active_players(team_id):
     st.error(f"Failed to fetch players: {response.json()}")
     return []
 
-# ✅ Function to fetch player season averages
+# ✅ FIXED: Function to fetch player season averages (Corrected Player ID Format)
 def fetch_player_season_averages(player_id):
-    url = f"{BASE_URL}/season_averages/general?season=2024&season_type=regular&type=base&player_ids={player_id}"
+    url = f"{BASE_URL}/season_averages/general?season=2024&season_type=regular&type=base&player_ids[]={player_id}"
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
         stats = response.json().get("data", [])
@@ -37,7 +37,7 @@ def fetch_player_season_averages(player_id):
     st.error(f"Failed to fetch season averages: {response.json()}")
     return None
 
-# ✅ Function to fetch last 10 game logs for a player (Fixing Date Issues)
+# ✅ FIXED: Function to fetch last 10 game logs for a player (Corrected Opponent Data)
 def fetch_recent_player_game_logs(player_id):
     url = f"{BASE_URL}/stats?player_ids[]={player_id}&per_page=10&sort=game.date&order=desc"
     response = requests.get(url, headers=HEADERS)
@@ -45,9 +45,13 @@ def fetch_recent_player_game_logs(player_id):
         data = response.json().get("data", [])
         cleaned_logs = []
         for game in data:
+            home_team = game["game"]["home_team"]
+            visitor_team = game["game"]["visitor_team"]
+            opponent = visitor_team["full_name"] if game["game"]["home_team_id"] == home_team["id"] else home_team["full_name"]
+            
             game_data = {
                 "Date": game["game"]["date"],
-                "Opponent": game["game"]["visitor_team"]["full_name"] if game["game"]["home_team"]["id"] == game["game"]["home_team_id"] else game["game"]["home_team"]["full_name"],
+                "Opponent": opponent,
                 "Points": game.get("pts", "N/A"),
                 "Rebounds": game.get("reb", "N/A"),
                 "Assists": game.get("ast", "N/A"),
