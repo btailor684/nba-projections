@@ -25,6 +25,14 @@ def fetch_active_players(team_id):
         return response.json()["data"]
     return []
 
+# Function to fetch last 10 games for a selected player
+def fetch_player_game_logs(player_id):
+    url = f"{BASE_URL}/stats?player_ids[]={player_id}&per_page=10"
+    response = requests.get(url, headers=HEADERS)
+    if response.status_code == 200:
+        return response.json().get("data", [])
+    return []
+
 # Streamlit UI
 st.sidebar.title("🏀 Today's NBA Games")
 st.sidebar.write("View today's NBA games and players.")
@@ -54,12 +62,37 @@ if selected_game:
         
         if selected_player_name:
             player_info = player_dict[selected_player_name]
+            player_id = player_info["id"]
+            
+            # Display Basic Info
             st.write(f"📊 **Player Details for: {selected_player_name}**")
             st.write(f"- **Position:** {player_info.get('position', 'N/A')}")
             st.write(f"- **Height:** {player_info.get('height', 'N/A')}")
             st.write(f"- **Weight:** {player_info.get('weight', 'N/A')}")
             st.write(f"- **College:** {player_info.get('college', 'N/A')}")
             st.write(f"- **Country:** {player_info.get('country', 'N/A')}")
+
+            # Fetch and Display Last 10 Games
+            st.subheader(f"📈 Last 10 Games for {selected_player_name}")
+            game_logs = fetch_player_game_logs(player_id)
+            
+            if game_logs:
+                # Create a DataFrame
+                game_log_df = pd.DataFrame([
+                    {
+                        "Date": game["game"]["date"],
+                        "Points": game["pts"],
+                        "Rebounds": game["reb"],
+                        "Assists": game["ast"],
+                        "Minutes": game["min"],
+                        "FG%": round((game["fg_pct"] * 100), 1) if game["fg_pct"] is not None else "N/A"
+                    } for game in game_logs
+                ])
+                
+                # Show in table
+                st.table(game_log_df)
+            else:
+                st.warning("⚠️ No recent game stats available for this player.")
     else:
         st.warning("⚠️ No active players found for this game.")
 
