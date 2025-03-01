@@ -43,7 +43,6 @@ def fetch_player_season_averages(player_id):
                 "Minutes": stats[0].get("min", "N/A")
             }
             return readable_stats
-    st.warning(f"⚠️ No season averages found for player {player_id}.")
     return None
 
 # ✅ FIXED: Function to fetch last 10 game logs (Backtracks from Game Date)
@@ -58,7 +57,15 @@ def fetch_recent_player_game_logs(player_id, game_date):
         cleaned_logs = []
         for game in data:
             try:
-                opponent = game["game"]["visitor_team"]["full_name"] if game["game"]["home_team_id"] != game["game"]["visitor_team"]["id"] else game["game"]["home_team"]["full_name"]
+                home_team_id = game["game"].get("home_team_id", None)
+                visitor_team = game["game"].get("visitor_team", None)
+                home_team = game["game"].get("home_team", None)
+
+                opponent = "Unknown"
+                if visitor_team and home_team_id and visitor_team.get("id") != home_team_id:
+                    opponent = visitor_team.get("full_name", "Unknown")
+                elif home_team:
+                    opponent = home_team.get("full_name", "Unknown")
 
                 game_data = {
                     "Date": game["game"]["date"],
@@ -71,9 +78,8 @@ def fetch_recent_player_game_logs(player_id, game_date):
                 }
                 cleaned_logs.append(game_data)
             except KeyError as e:
-                st.error(f"Game log error: Missing key {e}")
+                st.warning(f"Skipping game log due to missing key: {e}")
         return cleaned_logs
-    st.warning(f"⚠️ No recent game logs found for player {player_id}.")
     return []
 
 # ✅ FIXED: Function to fetch betting odds (FanDuel)
@@ -89,7 +95,6 @@ def fetch_betting_odds(game_id):
                 "Over/Under": odds_data[0].get("over_under", "N/A"),
                 "Over/Under Odds": odds_data[0].get("over_under_odds", "N/A"),
             }
-    st.warning(f"⚠️ No betting odds found for game {game_id}.")
     return {}
 
 # ✅ Streamlit UI
