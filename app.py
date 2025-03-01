@@ -25,7 +25,7 @@ def fetch_active_players(team_id):
         return response.json().get("data", [])
     return []
 
-# Function to fetch player season averages
+# ✅ **Fixed Function to Fetch Season Averages**
 def fetch_player_season_averages(player_id):
     url = f"{BASE_URL}/season_averages/general?season=2024&season_type=regular&type=base&player_ids[]={player_id}"
     response = requests.get(url, headers=HEADERS)
@@ -90,7 +90,7 @@ if selected_game:
             st.write(f"- **College:** {player_info.get('college', 'N/A')}")
             st.write(f"- **Country:** {player_info.get('country', 'N/A')}")
 
-            # Fetch and Display Season Averages
+            # ✅ **Fixed Season Averages Retrieval**
             st.subheader(f"📈 Season Averages for {selected_player_name}")
             season_averages = fetch_player_season_averages(player_id)
             
