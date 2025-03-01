@@ -11,7 +11,7 @@ BASE_URL = "https://api.balldontlie.io/v1"
 # Function to fetch today's NBA games
 def fetch_games():
     today = datetime.now().strftime("%Y-%m-%d")
-    url = f"{BASE_URL}/games?dates[]={today}"
+    url = f"{BASE_URL}/games?start_date={today}&end_date={today}"
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
         return response.json().get("data", [])
@@ -19,13 +19,13 @@ def fetch_games():
 
 # Function to fetch active players for a selected game
 def fetch_active_players(team_id):
-    url = f"{BASE_URL}/players/active?team_ids[]={team_id}&per_page=100"
+    url = f"{BASE_URL}/players?team_ids[]={team_id}&per_page=50"
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
         return response.json().get("data", [])
     return []
 
-# ✅ **Fixed Function to Fetch Season Averages**
+# ✅ **Fixed Season Averages Fetching**
 def fetch_player_season_averages(player_id):
     url = f"{BASE_URL}/season_averages/general?season=2024&season_type=regular&type=base&player_ids[]={player_id}"
     response = requests.get(url, headers=HEADERS)
@@ -35,7 +35,7 @@ def fetch_player_season_averages(player_id):
         return stats[0] if stats else None
     return None
 
-# Function to fetch last 10 game logs **(ENSURING MOST RECENT GAMES)**
+# ✅ **Fixing Last 10 Game Logs & Opponent Name**
 def fetch_recent_player_game_logs(player_id):
     today = datetime.now().strftime("%Y-%m-%d")
     url = f"{BASE_URL}/stats?player_ids[]={player_id}&seasons[]=2024&per_page=50"
@@ -43,11 +43,16 @@ def fetch_recent_player_game_logs(player_id):
     
     if response.status_code == 200:
         games = response.json().get("data", [])
-        # **Filter games that have already been played**
+        # **Filter completed games**
         completed_games = [game for game in games if game["game"]["date"] < today]
-        # **Sort games by most recent first**
+        # **Sort games by most recent**
         completed_games.sort(key=lambda x: x["game"]["date"], reverse=True)
-        # **Return only the last 10 games**
+        # **Fix opponent name extraction**
+        for game in completed_games:
+            if "game" in game and "home_team_id" in game["game"]:
+                game["opponent"] = game["game"]["visitor_team"]["full_name"] if game["game"]["home_team_id"] == game["player"]["team_id"] else game["game"]["home_team"]["full_name"]
+            else:
+                game["opponent"] = "Unknown"
         return completed_games[:10]
     return []
 
@@ -109,7 +114,7 @@ if selected_game:
                 game_log_df = pd.DataFrame([
                     {
                         "Date": game["game"]["date"],
-                        "Opponent": game["game"]["visitor_team"]["full_name"] if game["game"]["home_team_id"] == home_team["id"] else game["game"]["home_team"]["full_name"],
+                        "Opponent": game["opponent"],
                         "Points": game.get("pts", 0),
                         "Rebounds": game.get("reb", 0),
                         "Assists": game.get("ast", 0),
