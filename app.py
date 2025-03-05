@@ -3,9 +3,9 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-# API Key (Do NOT remove or alter)
+# API Key (Ensuring this is always set)
 API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
-HEADERS = {"Authorization": API_KEY}
+HEADERS = {"Authorization": API_KEY}  # Ensure API key is used properly
 BASE_URL = "https://api.balldontlie.io/v1"
 
 ### 🔹 FUNCTION: Fetch today's NBA games
@@ -27,7 +27,7 @@ def fetch_active_players(team_id):
 
 ### 🔹 FUNCTION: Fetch season averages for a player (FIXED)
 def fetch_player_season_averages(player_id):
-    url = f"{BASE_URL}/season_averages?season=2024&player_ids[]={player_id}"
+    url = f"{BASE_URL}/season_averages?season=2024&player_ids={player_id}"
     response = requests.get(url, headers=HEADERS)
 
     if response.status_code == 200:
