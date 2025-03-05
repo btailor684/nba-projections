@@ -25,17 +25,16 @@ def fetch_active_players(team_id):
         return response.json().get("data", [])
     return []
 
-### 🔹 FUNCTION: Fetch season averages for a player (WITH DEBUGGING)
 def fetch_player_season_averages(player_id):
-    url = f"{BASE_URL}/season_averages?season=2024&player_ids={player_id}"
+    url = f"{BASE_URL}/season_averages?season=2024&player_id={player_id}"  # ✅ Fixing player_id format
     response = requests.get(url, headers=HEADERS)
 
-    # DEBUG: Log full API response
+    # ✅ Debugging Output for API Call
     st.write(f"🔍 Debug: Fetching Season Averages from API: {url}")
-    
+
     if response.status_code == 200:
         data = response.json().get("data", [])
-        st.write(f"✅ API Response: {data}")  # Log raw response
+        st.write(f"✅ API Response: {data}")  # ✅ Logging the API response
 
         if data:
             return {
@@ -47,6 +46,11 @@ def fetch_player_season_averages(player_id):
             }
         else:
             st.error("⚠️ No season averages data returned by API.")
+    else:
+        st.error(f"❌ API Error: {response.status_code} - {response.text}")  # ✅ Log API error message
+
+    return None  # Return None if no data is found
+
     else:
         st.error(f"❌ API Error: {response.status_code} - {response.text}")  # Log API error message
 
