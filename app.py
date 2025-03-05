@@ -31,16 +31,17 @@ def fetch_player_season_averages(player_id):
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
         stats = response.json().get("data", [])
-        return stats[0] if stats else None
+        if stats:
+            return stats[0]  # Get first item
     return None
 
-# Function to fetch last 10 recent game logs for a player
+# Function to fetch last 10 recent played game logs
 def fetch_recent_player_game_logs(player_id):
     url = f"{BASE_URL}/stats?player_ids[]={player_id}&per_page=100&sort=game.date&order=desc"
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
         game_logs = response.json().get("data", [])
-        return [g for g in game_logs if g.get("min", 0) > 0][:10]  # Only games played, last 10
+        return [g for g in game_logs if g.get("min", 0) > 0][:10]  # Filter only games played
     return []
 
 # Function to fetch betting odds (FanDuel Only, Spread & O/U)
