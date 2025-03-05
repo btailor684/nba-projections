@@ -25,15 +25,26 @@ def fetch_active_players(team_id):
         return response.json().get("data", [])
     return []
 
-# Function to fetch player season averages
-def fetch_player_season_averages(player_id):
-    url = f"{BASE_URL}/season_averages/general?season=2024&season_type=regular&type=base&player_ids[]={player_id}"
-    response = requests.get(url, headers=HEADERS)
-    if response.status_code == 200:
-        stats = response.json().get("data", [])
-        if stats:
-            return stats[0]  # Get first item
-    return None
+# Display Season Averages (Improved)
+season_avg = fetch_player_season_averages(player_id)
+
+if season_avg:
+    st.subheader(f"📊 Season Averages for {selected_player}")
+
+    # Check if required stats exist
+    stats_to_display = {
+        "Points": season_avg.get("pts", "N/A"),
+        "Rebounds": season_avg.get("reb", "N/A"),
+        "Assists": season_avg.get("ast", "N/A"),
+        "Field Goal %": season_avg.get("fg_pct", "N/A"),
+        "Minutes": season_avg.get("min", "N/A"),
+    }
+
+    # Convert to a DataFrame for display
+    df_season_avg = pd.DataFrame([stats_to_display])
+    st.table(df_season_avg)
+else:
+    st.warning("⚠️ No season averages available for this player.")
 
 # Function to fetch last 10 recent played game logs
 def fetch_recent_player_game_logs(player_id):
