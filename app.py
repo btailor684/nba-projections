@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-# API Key (Ensuring this is always set)
+# ✅ API Key (Ensuring this is always set)
 API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
 HEADERS = {"Authorization": API_KEY}  # Ensure API key is used properly
 BASE_URL = "https://api.balldontlie.io/v1"
@@ -19,19 +19,23 @@ def fetch_games():
 
 ### 🔹 FUNCTION: Fetch active players for a selected game
 def fetch_active_players(team_id):
-    url = f"{BASE_URL}/players/active?team_ids[]={team_id}&per_page=100"
+    url = f"{BASE_URL}/players?team_ids[]={team_id}&per_page=100"
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
         return response.json().get("data", [])
     return []
 
-### 🔹 FUNCTION: Fetch season averages for a player (FIXED)
+### 🔹 FUNCTION: Fetch season averages for a player (WITH DEBUGGING)
 def fetch_player_season_averages(player_id):
     url = f"{BASE_URL}/season_averages?season=2024&player_ids={player_id}"
     response = requests.get(url, headers=HEADERS)
 
+    # DEBUG: Log full API response
+    st.write(f"🔍 Debug: Fetching Season Averages from API: {url}")
+    
     if response.status_code == 200:
         data = response.json().get("data", [])
+        st.write(f"✅ API Response: {data}")  # Log raw response
 
         if data:
             return {
@@ -41,6 +45,10 @@ def fetch_player_season_averages(player_id):
                 "Field Goal %": data[0].get("fg_pct", "N/A"),
                 "Minutes": data[0].get("min", "N/A"),
             }
+        else:
+            st.error("⚠️ No season averages data returned by API.")
+    else:
+        st.error(f"❌ API Error: {response.status_code} - {response.text}")  # Log API error message
 
     return None  # Return None if no data is found
 
@@ -78,7 +86,7 @@ if selected_game:
             player_id = player_dict[selected_player]
             st.write(f"📊 Fetching stats for: **{selected_player} (ID: {player_id})**")
             
-            # Fetch Season Averages
+            # Fetch Season Averages (DEBUGGING ENABLED)
             season_avg = fetch_player_season_averages(player_id)
             if season_avg:
                 st.subheader(f"📊 Season Averages for {selected_player}")
