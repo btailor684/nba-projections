@@ -36,22 +36,19 @@ def fetch_player_season_averages(player_id):
     url = f"{BASE_URL}/season_averages?season=2024&player_id={player_id}"  # ✅ FIXED PLAYER ID FORMAT
     response = requests.get(url, headers=HEADERS)
 
-    st.write(f"🔍 Debug: Fetching Season Averages from API: {url}")  # ✅ DEBUG OUTPUT
-
     if response.status_code == 200:
         data = response.json().get("data", [])
-        st.write(f"✅ API Response: {data}")  # ✅ SHOW RESPONSE FOR DEBUGGING
 
         if data:
             return {
-                "Points": data[0].get("pts", "N/A"),
-                "Rebounds": data[0].get("reb", "N/A"),
-                "Assists": data[0].get("ast", "N/A"),
-                "Field Goal %": data[0].get("fg_pct", "N/A"),
-                "Minutes": data[0].get("min", "N/A"),
+                "Points Per Game": f"**{data[0].get('pts', 'N/A')}**",
+                "Rebounds Per Game": f"**{data[0].get('reb', 'N/A')}**",
+                "Assists Per Game": f"**{data[0].get('ast', 'N/A')}**",
+                "Field Goal %": f"**{round(data[0].get('fg_pct', 0) * 100, 1)}%**" if data[0].get('fg_pct') else "**N/A**",
+                "Minutes Per Game": f"**{data[0].get('min', 'N/A')}**",
             }
         else:
-            st.error("⚠️ No season averages available for this player.")
+            st.warning("⚠️ No season averages available for this player.")
     
     st.error(f"❌ API Error: {response.status_code} - {response.text}")  # ✅ ERROR LOGGING
     return None
@@ -91,8 +88,22 @@ if selected_game:
             # ✅ Fetch and Display Season Averages
             season_avg = fetch_player_season_averages(player_id)
             if season_avg:
-                st.subheader(f"📊 Season Averages for {selected_player}")
+                st.subheader(f"📊 **Season Averages for {selected_player}**")
                 season_df = pd.DataFrame([season_avg])
+                
+                # ✅ Improve Readability with Larger Font
+                st.markdown(
+                    f"""
+                    <style>
+                    .dataframe th, .dataframe td {{
+                        font-size: 18px !important;
+                        text-align: center;
+                    }}
+                    </style>
+                    """,
+                    unsafe_allow_html=True
+                )
+
                 st.table(season_df)
             else:
                 st.warning("⚠️ No season averages available for this player.")
