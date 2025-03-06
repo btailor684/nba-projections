@@ -52,8 +52,8 @@ def fetch_player_season_averages(player_id):
     st.error(f"❌ API Error: {response.status_code} - {response.text}")
     return None
 
-# ✅ Fetch Last 10 Recent Game Logs for a Player
-def fetch_recent_player_game_logs(player_id):
+# ✅ Fetch Last 10 **Most Recent** Game Logs for a Player
+def fetch_recent_player_game_logs(player_id, player_team_id):
     url = f"{BASE_URL}/stats?player_ids[]={player_id}&per_page=10&sort=game.date&order=desc"
     response = requests.get(url, headers=HEADERS)
 
@@ -67,12 +67,10 @@ def fetch_recent_player_game_logs(player_id):
             visitor_team_id = game_info.get("visitor_team_id")
             
             # ✅ FIX: Correctly Assign Opponent Name
-            opponent = "Unknown"
-            if home_team_id and visitor_team_id:
-                if home_team_id == game["team"]["id"]:
-                    opponent = game_info.get("visitor_team", {}).get("full_name", "Unknown")
-                else:
-                    opponent = game_info.get("home_team", {}).get("full_name", "Unknown")
+            if home_team_id == player_team_id:
+                opponent = game_info.get("visitor_team", {}).get("full_name", "Unknown")
+            else:
+                opponent = game_info.get("home_team", {}).get("full_name", "Unknown")
 
             # ✅ FIX: Ensure Game Dates Are Sorted From Current Date
             game_logs.append({
@@ -85,7 +83,7 @@ def fetch_recent_player_game_logs(player_id):
                 "FG%": round(game.get("fg_pct", 0) * 100, 1) if game.get("fg_pct") else "N/A"
             })
 
-        return sorted(game_logs, key=lambda x: x["Date"], reverse=True)  # Ensure newest games first
+        return game_logs  
 
     st.error(f"❌ API Error: {response.status_code} - {response.text}")
     return []
@@ -115,11 +113,11 @@ if selected_game:
     players = players_home + players_away
 
     if players:
-        player_dict = {f"{player['first_name']} {player['last_name']}": player["id"] for player in players}
+        player_dict = {f"{player['first_name']} {player['last_name']}": (player["id"], player["team"]["id"]) for player in players}
         selected_player = st.selectbox("Select a Player", list(player_dict.keys()))
 
         if selected_player:
-            player_id = player_dict[selected_player]
+            player_id, player_team_id = player_dict[selected_player]
             st.write(f"📊 Fetching stats for: **{selected_player} (ID: {player_id})**")
 
             # ✅ Fetch and Display Season Averages
@@ -128,19 +126,12 @@ if selected_game:
                 st.subheader(f"📊 **Season Averages for {selected_player}**")
                 season_html = "".join([f"<p style='font-size:20px;'><strong>{key}:</strong> {value}</p>" for key, value in season_avg.items()])
                 st.markdown(season_html, unsafe_allow_html=True)
-            else:
-                st.warning("⚠️ No season averages available for this player.")
 
-            # ✅ Fetch and Display Last 10 Games
-            game_logs = fetch_recent_player_game_logs(player_id)
+            # ✅ Fetch and Display Last 10 Games (Correct Opponent Names)
+            game_logs = fetch_recent_player_game_logs(player_id, player_team_id)
             if game_logs:
                 df_logs = pd.DataFrame(game_logs)
                 st.subheader(f"📊 **Last 10 Games for {selected_player}**")
                 st.dataframe(df_logs.style.set_properties(**{'font-size': '18px'}))
-            else:
-                st.warning("⚠️ No recent game logs available for this player.")
-
-    else:
-        st.warning("⚠️ No active players found for this game.")
 
 st.write("Built with ❤️ for NBA fans | Data: balldontlie.io")
