@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-# ✅ Keep API Key in Memory - Ensure this remains set at all times
+# ✅ API Key (Stored in Memory)
 API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
 HEADERS = {"Authorization": API_KEY}
 BASE_URL = "https://api.balldontlie.io/v1"
@@ -20,7 +20,7 @@ def fetch_games():
     st.error(f"❌ Error Fetching Games: {response.status_code} - {response.text}")
     return []
 
-# ✅ Function to Fetch Active Players for a Selected Game
+# ✅ Function to Fetch Active Players
 def fetch_active_players(team_id):
     url = f"{BASE_URL}/players/active?team_ids[]={team_id}&per_page=100"
     response = requests.get(url, headers=HEADERS)
@@ -33,7 +33,7 @@ def fetch_active_players(team_id):
 
 # ✅ Function to Fetch Player Season Averages
 def fetch_player_season_averages(player_id):
-    url = f"{BASE_URL}/season_averages?season=2024&player_id={player_id}"  # ✅ FIXED PLAYER ID FORMAT
+    url = f"{BASE_URL}/season_averages?season=2024&player_id={player_id}"
     response = requests.get(url, headers=HEADERS)
 
     if response.status_code == 200:
@@ -41,19 +41,19 @@ def fetch_player_season_averages(player_id):
 
         if data:
             return {
-                "Points Per Game": f"**{data[0].get('pts', 'N/A')}**",
-                "Rebounds Per Game": f"**{data[0].get('reb', 'N/A')}**",
-                "Assists Per Game": f"**{data[0].get('ast', 'N/A')}**",
-                "Field Goal %": f"**{round(data[0].get('fg_pct', 0) * 100, 1)}%**" if data[0].get('fg_pct') else "**N/A**",
-                "Minutes Per Game": f"**{data[0].get('min', 'N/A')}**",
+                "Points Per Game": f"<span style='font-size:22px; color:#E63946; font-weight:bold;'>{data[0].get('pts', 'N/A')}</span>",
+                "Rebounds Per Game": f"<span style='font-size:22px; color:#457B9D; font-weight:bold;'>{data[0].get('reb', 'N/A')}</span>",
+                "Assists Per Game": f"<span style='font-size:22px; color:#F4A261; font-weight:bold;'>{data[0].get('ast', 'N/A')}</span>",
+                "Field Goal %": f"<span style='font-size:22px; color:#2A9D8F; font-weight:bold;'>{round(data[0].get('fg_pct', 0) * 100, 1)}%</span>" if data[0].get('fg_pct') else "**N/A**",
+                "Minutes Per Game": f"<span style='font-size:22px; color:#1D3557; font-weight:bold;'>{data[0].get('min', 'N/A')}</span>",
             }
         else:
             st.warning("⚠️ No season averages available for this player.")
     
-    st.error(f"❌ API Error: {response.status_code} - {response.text}")  # ✅ ERROR LOGGING
+    st.error(f"❌ API Error: {response.status_code} - {response.text}")
     return None
 
-# ✅ Streamlit UI Setup
+# ✅ Streamlit UI
 st.sidebar.title("🏀 Today's NBA Games")
 st.sidebar.write("View today's NBA games and players.")
 
@@ -89,22 +89,11 @@ if selected_game:
             season_avg = fetch_player_season_averages(player_id)
             if season_avg:
                 st.subheader(f"📊 **Season Averages for {selected_player}**")
-                season_df = pd.DataFrame([season_avg])
-                
-                # ✅ Improve Readability with Larger Font
-                st.markdown(
-                    f"""
-                    <style>
-                    .dataframe th, .dataframe td {{
-                        font-size: 18px !important;
-                        text-align: center;
-                    }}
-                    </style>
-                    """,
-                    unsafe_allow_html=True
-                )
 
-                st.table(season_df)
+                # ✅ Custom HTML for Better Styling
+                season_html = "".join([f"<p style='font-size:20px;'><strong>{key}:</strong> {value}</p>" for key, value in season_avg.items()])
+
+                st.markdown(season_html, unsafe_allow_html=True)
             else:
                 st.warning("⚠️ No season averages available for this player.")
 
