@@ -1,14 +1,14 @@
 import streamlit as st
 import requests
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 
-# ✅ API Key (Stored in Memory)
+# ✅ API Key
 API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
 HEADERS = {"Authorization": API_KEY}
 BASE_URL = "https://api.balldontlie.io/v1"
 
-# ✅ Function to Fetch Today's NBA Games
+# ✅ Fetch Today's NBA Games
 def fetch_games():
     today = datetime.now().strftime("%Y-%m-%d")
     url = f"{BASE_URL}/games?dates[]={today}"
@@ -20,7 +20,7 @@ def fetch_games():
     st.error(f"❌ Error Fetching Games: {response.status_code} - {response.text}")
     return []
 
-# ✅ Function to Fetch Active Players
+# ✅ Fetch Active Players
 def fetch_active_players(team_id):
     url = f"{BASE_URL}/players/active?team_ids[]={team_id}&per_page=100"
     response = requests.get(url, headers=HEADERS)
@@ -31,14 +31,13 @@ def fetch_active_players(team_id):
     st.error(f"❌ Error Fetching Players: {response.status_code} - {response.text}")
     return []
 
-# ✅ Function to Fetch Player Season Averages
+# ✅ Fetch Player Season Averages
 def fetch_player_season_averages(player_id):
     url = f"{BASE_URL}/season_averages?season=2024&player_id={player_id}"
     response = requests.get(url, headers=HEADERS)
 
     if response.status_code == 200:
         data = response.json().get("data", [])
-
         if data:
             return {
                 "Points Per Game": f"<span style='font-size:22px; color:#E63946; font-weight:bold;'>{data[0].get('pts', 'N/A')}</span>",
@@ -53,9 +52,37 @@ def fetch_player_season_averages(player_id):
     st.error(f"❌ API Error: {response.status_code} - {response.text}")
     return None
 
+# ✅ Fetch Last 10 Game Logs for a Player
+def fetch_recent_player_game_logs(player_id):
+    url = f"{BASE_URL}/stats?player_ids[]={player_id}&per_page=10&sort=game.date&order=desc"
+    response = requests.get(url, headers=HEADERS)
+
+    if response.status_code == 200:
+        data = response.json().get("data", [])
+        game_logs = []
+
+        for game in data:
+            game_info = game["game"]
+            opponent = game_info["visitor_team"]["full_name"] if game_info["home_team_id"] == game["team"]["id"] else game_info["home_team"]["full_name"]
+            
+            game_logs.append({
+                "Date": game_info["date"][:10],  # Extract YYYY-MM-DD
+                "Opponent": opponent,
+                "Points": game.get("pts", 0),
+                "Rebounds": game.get("reb", 0),
+                "Assists": game.get("ast", 0),
+                "Minutes": game.get("min", "N/A"),
+                "FG%": round(game.get("fg_pct", 0) * 100, 1) if game.get("fg_pct") else "N/A"
+            })
+
+        return game_logs
+
+    st.error(f"❌ API Error: {response.status_code} - {response.text}")
+    return []
+
 # ✅ Streamlit UI
 st.sidebar.title("🏀 Today's NBA Games")
-st.sidebar.write("View today's NBA games and players.")
+st.sidebar.write("View today's NBA games, players, and stats.")
 
 games = fetch_games()
 game_options = {f"{game['home_team']['full_name']} vs {game['visitor_team']['full_name']}": game for game in games}
@@ -89,13 +116,19 @@ if selected_game:
             season_avg = fetch_player_season_averages(player_id)
             if season_avg:
                 st.subheader(f"📊 **Season Averages for {selected_player}**")
-
-                # ✅ Custom HTML for Better Styling
                 season_html = "".join([f"<p style='font-size:20px;'><strong>{key}:</strong> {value}</p>" for key, value in season_avg.items()])
-
                 st.markdown(season_html, unsafe_allow_html=True)
             else:
                 st.warning("⚠️ No season averages available for this player.")
+
+            # ✅ Fetch and Display Last 10 Games
+            game_logs = fetch_recent_player_game_logs(player_id)
+            if game_logs:
+                df_logs = pd.DataFrame(game_logs)
+                st.subheader(f"📊 **Last 10 Games for {selected_player}**")
+                st.dataframe(df_logs.style.set_properties(**{'font-size': '18px'}))
+            else:
+                st.warning("⚠️ No recent game logs available for this player.")
 
     else:
         st.warning("⚠️ No active players found for this game.")
