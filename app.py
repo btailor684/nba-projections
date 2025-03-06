@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # ✅ API Key
 API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
@@ -13,7 +13,7 @@ def fetch_games():
     today = datetime.now().strftime("%Y-%m-%d")
     url = f"{BASE_URL}/games?dates[]={today}"
     response = requests.get(url, headers=HEADERS)
-    
+
     if response.status_code == 200:
         return response.json().get("data", [])
     
@@ -24,7 +24,7 @@ def fetch_games():
 def fetch_active_players(team_id):
     url = f"{BASE_URL}/players/active?team_ids[]={team_id}&per_page=100"
     response = requests.get(url, headers=HEADERS)
-    
+
     if response.status_code == 200:
         return response.json().get("data", [])
     
@@ -52,7 +52,7 @@ def fetch_player_season_averages(player_id):
     st.error(f"❌ API Error: {response.status_code} - {response.text}")
     return None
 
-# ✅ Fetch Last 10 Game Logs for a Player
+# ✅ Fetch Last 10 Game Logs for a Player (Fixed Opponent Issue)
 def fetch_recent_player_game_logs(player_id):
     url = f"{BASE_URL}/stats?player_ids[]={player_id}&per_page=10&sort=game.date&order=desc"
     response = requests.get(url, headers=HEADERS)
@@ -62,11 +62,21 @@ def fetch_recent_player_game_logs(player_id):
         game_logs = []
 
         for game in data:
-            game_info = game["game"]
-            opponent = game_info["visitor_team"]["full_name"] if game_info["home_team_id"] == game["team"]["id"] else game_info["home_team"]["full_name"]
+            game_info = game.get("game", {})
+            home_team_id = game_info.get("home_team_id")
+            visitor_team_id = game_info.get("visitor_team_id")
             
+            # ✅ FIX: Properly Determine Opponent Name
+            if home_team_id and visitor_team_id:
+                if home_team_id == game["team"]["id"]:
+                    opponent = game_info.get("visitor_team", {}).get("full_name", "Unknown")
+                else:
+                    opponent = game_info.get("home_team", {}).get("full_name", "Unknown")
+            else:
+                opponent = "Unknown"
+
             game_logs.append({
-                "Date": game_info["date"][:10],  # Extract YYYY-MM-DD
+                "Date": game_info.get("date", "")[:10],  # Extract YYYY-MM-DD
                 "Opponent": opponent,
                 "Points": game.get("pts", 0),
                 "Rebounds": game.get("reb", 0),
