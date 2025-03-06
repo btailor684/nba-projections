@@ -33,7 +33,7 @@ def fetch_active_players(team_id):
 
 # ✅ Fetch Player Season Averages
 def fetch_player_season_averages(player_id):
-    url = f"{BASE_URL}/season_averages?season=2024&player_id={player_id}"
+    url = f"{BASE_URL}/season_averages?season=2024&player_ids={player_id}"
     response = requests.get(url, headers=HEADERS)
 
     if response.status_code == 200:
@@ -65,7 +65,7 @@ def fetch_recent_player_game_logs(player_id, player_team_id):
             game_info = game.get("game", {})
             home_team_id = game_info.get("home_team_id")
             visitor_team_id = game_info.get("visitor_team_id")
-            
+
             # ✅ FIX: Correctly Assign Opponent Name
             if home_team_id == player_team_id:
                 opponent = game_info.get("visitor_team", {}).get("full_name", "Unknown")
