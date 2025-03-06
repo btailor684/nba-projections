@@ -13,7 +13,7 @@ def fetch_games():
     today = datetime.now().strftime("%Y-%m-%d")
     url = f"{BASE_URL}/games?dates[]={today}"
     response = requests.get(url, headers=HEADERS)
-
+    
     if response.status_code == 200:
         return response.json().get("data", [])
     
@@ -52,7 +52,7 @@ def fetch_player_season_averages(player_id):
     st.error(f"❌ API Error: {response.status_code} - {response.text}")
     return None
 
-# ✅ Fetch Last 10 Game Logs for a Player (Fixed Opponent Issue)
+# ✅ Fetch Last 10 Recent Game Logs for a Player
 def fetch_recent_player_game_logs(player_id):
     url = f"{BASE_URL}/stats?player_ids[]={player_id}&per_page=10&sort=game.date&order=desc"
     response = requests.get(url, headers=HEADERS)
@@ -66,15 +66,15 @@ def fetch_recent_player_game_logs(player_id):
             home_team_id = game_info.get("home_team_id")
             visitor_team_id = game_info.get("visitor_team_id")
             
-            # ✅ FIX: Properly Determine Opponent Name
+            # ✅ FIX: Correctly Assign Opponent Name
+            opponent = "Unknown"
             if home_team_id and visitor_team_id:
                 if home_team_id == game["team"]["id"]:
                     opponent = game_info.get("visitor_team", {}).get("full_name", "Unknown")
                 else:
                     opponent = game_info.get("home_team", {}).get("full_name", "Unknown")
-            else:
-                opponent = "Unknown"
 
+            # ✅ FIX: Ensure Game Dates Are Sorted From Current Date
             game_logs.append({
                 "Date": game_info.get("date", "")[:10],  # Extract YYYY-MM-DD
                 "Opponent": opponent,
@@ -85,7 +85,7 @@ def fetch_recent_player_game_logs(player_id):
                 "FG%": round(game.get("fg_pct", 0) * 100, 1) if game.get("fg_pct") else "N/A"
             })
 
-        return game_logs
+        return sorted(game_logs, key=lambda x: x["Date"], reverse=True)  # Ensure newest games first
 
     st.error(f"❌ API Error: {response.status_code} - {response.text}")
     return []
