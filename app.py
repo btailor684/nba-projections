@@ -11,7 +11,7 @@ BASE_URL = "https://api.balldontlie.io/v1"
 # ✅ Fetch Today's NBA Games
 def fetch_games():
     today = datetime.now().strftime("%Y-%m-%d")
-    url = f"{BASE_URL}/games?dates[]={today}"
+    url = f"{BASE_URL}/games?start_date={today}&end_date={today}"
     response = requests.get(url, headers=HEADERS)
     
     if response.status_code == 200:
@@ -22,7 +22,7 @@ def fetch_games():
 
 # ✅ Fetch Active Players
 def fetch_active_players(team_id):
-    url = f"{BASE_URL}/players/active?team_ids[]={team_id}&per_page=100"
+    url = f"{BASE_URL}/players?team_ids[]={team_id}&per_page=100"
     response = requests.get(url, headers=HEADERS)
 
     if response.status_code == 200:
@@ -33,18 +33,19 @@ def fetch_active_players(team_id):
 
 # ✅ Fetch Player Season Averages
 def fetch_player_season_averages(player_id):
-    url = f"{BASE_URL}/season_averages?season=2024&player_ids={player_id}"
+    url = f"{BASE_URL}/season_averages?season=2024&player_ids[]={player_id}"
     response = requests.get(url, headers=HEADERS)
 
     if response.status_code == 200:
         data = response.json().get("data", [])
         if data:
+            stats = data[0]
             return {
-                "Points Per Game": f"<span style='font-size:22px; color:#E63946; font-weight:bold;'>{data[0].get('pts', 'N/A')}</span>",
-                "Rebounds Per Game": f"<span style='font-size:22px; color:#457B9D; font-weight:bold;'>{data[0].get('reb', 'N/A')}</span>",
-                "Assists Per Game": f"<span style='font-size:22px; color:#F4A261; font-weight:bold;'>{data[0].get('ast', 'N/A')}</span>",
-                "Field Goal %": f"<span style='font-size:22px; color:#2A9D8F; font-weight:bold;'>{round(data[0].get('fg_pct', 0) * 100, 1)}%</span>" if data[0].get('fg_pct') else "**N/A**",
-                "Minutes Per Game": f"<span style='font-size:22px; color:#1D3557; font-weight:bold;'>{data[0].get('min', 'N/A')}</span>",
+                "Points Per Game": f"<span style='font-size:22px; color:#E63946; font-weight:bold;'>{stats.get('pts', 'N/A')}</span>",
+                "Rebounds Per Game": f"<span style='font-size:22px; color:#457B9D; font-weight:bold;'>{stats.get('reb', 'N/A')}</span>",
+                "Assists Per Game": f"<span style='font-size:22px; color:#F4A261; font-weight:bold;'>{stats.get('ast', 'N/A')}</span>",
+                "Field Goal %": f"<span style='font-size:22px; color:#2A9D8F; font-weight:bold;'>{round(stats.get('fg_pct', 0) * 100, 1)}%</span>" if stats.get('fg_pct') else "**N/A**",
+                "Minutes Per Game": f"<span style='font-size:22px; color:#1D3557; font-weight:bold;'>{stats.get('min', 'N/A')}</span>",
             }
         else:
             st.warning("⚠️ No season averages available for this player.")
