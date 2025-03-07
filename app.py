@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-# ✅ API Key (Make sure this remains)
+# ✅ API Key (Ensure this remains correct)
 API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
 HEADERS = {"Authorization": API_KEY}
 BASE_URL = "https://api.balldontlie.io/v1"
@@ -20,7 +20,7 @@ def fetch_games():
     st.error(f"❌ Error Fetching Games: {response.status_code} - {response.text}")
     return []
 
-# ✅ Fetch Active Players
+# ✅ Fetch Active Players for a Team
 def fetch_active_players(team_id):
     url = f"{BASE_URL}/players?team_ids[]={team_id}&per_page=100"
     response = requests.get(url, headers=HEADERS)
@@ -31,9 +31,9 @@ def fetch_active_players(team_id):
     st.error(f"❌ Error Fetching Players: {response.status_code} - {response.text}")
     return []
 
-# ✅ Fetch Player Season Averages (FIXED!)
+# ✅ Fetch Player Season Averages (FIXED API ERROR 400)
 def fetch_player_season_averages(player_id):
-    url = f"{BASE_URL}/season_averages?season=2024&player_ids[]={player_id}"
+    url = f"{BASE_URL}/season_averages?season=2024&player_ids={player_id}"
     response = requests.get(url, headers=HEADERS)
 
     if response.status_code == 200:
@@ -48,12 +48,12 @@ def fetch_player_season_averages(player_id):
                 "Minutes Per Game": f"<span style='font-size:22px; color:#1D3557; font-weight:bold;'>{stats.get('min', 'N/A')}</span>",
             }
         else:
-            st.warning("⚠️ No season averages available for this player.")
+            return None
     
     st.error(f"❌ API Error: {response.status_code} - {response.text}")
     return None
 
-# ✅ Fetch Last 10 Most Recent Game Logs (FIXED!)
+# ✅ Fetch Last 10 Most Recent Game Logs (FIXED Opponent Names & Order)
 def fetch_recent_player_game_logs(player_id, player_team_id):
     url = f"{BASE_URL}/stats?player_ids[]={player_id}&per_page=10&sort=game.date&order=desc"
     response = requests.get(url, headers=HEADERS)
