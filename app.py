@@ -25,7 +25,7 @@ def fetch_active_players(team_id):
 
 # ✅ Fetch Season Averages (FIXED)
 def fetch_player_season_averages(player_id):
-    url = f"{BASE_URL}/season_averages?season=2024&player_ids={player_id}"
+    url = f"{BASE_URL}/season_averages?season=2024&player_ids=player_id"
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
         stats = response.json().get("data", [])
