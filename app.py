@@ -33,7 +33,7 @@ def fetch_active_players(team_id):
 
 # ✅ Fetch Player Season Averages (FIXED API ERROR 400)
 def fetch_player_season_averages(player_id):
-    url = f"{BASE_URL}/season_averages?season=2024&player_ids={player_id}"
+    url = f"{BASE_URL}/season_averages?season=2024&player_ids=[player_id]"
     response = requests.get(url, headers=HEADERS)
 
     if response.status_code == 200:
