@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-# ✅ API Key
+# ✅ API Key (Make sure this remains)
 API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
 HEADERS = {"Authorization": API_KEY}
 BASE_URL = "https://api.balldontlie.io/v1"
@@ -13,7 +13,7 @@ def fetch_games():
     today = datetime.now().strftime("%Y-%m-%d")
     url = f"{BASE_URL}/games?start_date={today}&end_date={today}"
     response = requests.get(url, headers=HEADERS)
-    
+
     if response.status_code == 200:
         return response.json().get("data", [])
     
@@ -31,7 +31,7 @@ def fetch_active_players(team_id):
     st.error(f"❌ Error Fetching Players: {response.status_code} - {response.text}")
     return []
 
-# ✅ Fetch Player Season Averages
+# ✅ Fetch Player Season Averages (FIXED!)
 def fetch_player_season_averages(player_id):
     url = f"{BASE_URL}/season_averages?season=2024&player_ids[]={player_id}"
     response = requests.get(url, headers=HEADERS)
@@ -53,7 +53,7 @@ def fetch_player_season_averages(player_id):
     st.error(f"❌ API Error: {response.status_code} - {response.text}")
     return None
 
-# ✅ Fetch Last 10 **Most Recent** Game Logs for a Player
+# ✅ Fetch Last 10 Most Recent Game Logs (FIXED!)
 def fetch_recent_player_game_logs(player_id, player_team_id):
     url = f"{BASE_URL}/stats?player_ids[]={player_id}&per_page=10&sort=game.date&order=desc"
     response = requests.get(url, headers=HEADERS)
@@ -67,13 +67,13 @@ def fetch_recent_player_game_logs(player_id, player_team_id):
             home_team_id = game_info.get("home_team_id")
             visitor_team_id = game_info.get("visitor_team_id")
 
-            # ✅ FIX: Correctly Assign Opponent Name
+            # ✅ FIX: Correct Opponent Name
             if home_team_id == player_team_id:
                 opponent = game_info.get("visitor_team", {}).get("full_name", "Unknown")
             else:
                 opponent = game_info.get("home_team", {}).get("full_name", "Unknown")
 
-            # ✅ FIX: Ensure Game Dates Are Sorted From Current Date
+            # ✅ FIX: Get Correct Dates
             game_logs.append({
                 "Date": game_info.get("date", "")[:10],  # Extract YYYY-MM-DD
                 "Opponent": opponent,
@@ -121,14 +121,14 @@ if selected_game:
             player_id, player_team_id = player_dict[selected_player]
             st.write(f"📊 Fetching stats for: **{selected_player} (ID: {player_id})**")
 
-            # ✅ Fetch and Display Season Averages
+            # ✅ Fetch & Display Season Averages
             season_avg = fetch_player_season_averages(player_id)
             if season_avg:
                 st.subheader(f"📊 **Season Averages for {selected_player}**")
                 season_html = "".join([f"<p style='font-size:20px;'><strong>{key}:</strong> {value}</p>" for key, value in season_avg.items()])
                 st.markdown(season_html, unsafe_allow_html=True)
 
-            # ✅ Fetch and Display Last 10 Games (Correct Opponent Names)
+            # ✅ Fetch & Display Last 10 Games (FIXED Opponent Names & Dates)
             game_logs = fetch_recent_player_game_logs(player_id, player_team_id)
             if game_logs:
                 df_logs = pd.DataFrame(game_logs)
