@@ -1,99 +1,41 @@
 import streamlit as st
 import requests
 import pandas as pd
-from datetime import datetime
 
-# ✅ API Key (Ensure this remains correct)
+# ✅ Correct API Key (DO NOT REMOVE)
 API_KEY = "d8b9eafb-926c-4a16-9ca3-3743e5aee7e8"
 HEADERS = {"Authorization": API_KEY}
 BASE_URL = "https://api.balldontlie.io/v1"
 
 # ✅ Fetch Today's NBA Games
 def fetch_games():
-    today = datetime.now().strftime("%Y-%m-%d")
-    url = f"{BASE_URL}/games?start_date={today}&end_date={today}"
+    url = f"{BASE_URL}/games"
     response = requests.get(url, headers=HEADERS)
-
     if response.status_code == 200:
         return response.json().get("data", [])
-    
-    st.error(f"❌ Error Fetching Games: {response.status_code} - {response.text}")
     return []
 
 # ✅ Fetch Active Players for a Team
 def fetch_active_players(team_id):
     url = f"{BASE_URL}/players?team_ids[]={team_id}&per_page=100"
     response = requests.get(url, headers=HEADERS)
-
     if response.status_code == 200:
         return response.json().get("data", [])
-    
-    st.error(f"❌ Error Fetching Players: {response.status_code} - {response.text}")
     return []
 
-# ✅ Fetch Player Season Averages (FIXED API ERROR 400)
+# ✅ Fetch Season Averages (FIXED)
 def fetch_player_season_averages(player_id):
-    url = f"{BASE_URL}/season_averages?season=2024&player_ids=(player_id)"
+    url = f"{BASE_URL}/season_averages?season=2024&player_ids={player_id}"
     response = requests.get(url, headers=HEADERS)
-
     if response.status_code == 200:
-        data = response.json().get("data", [])
-        if data:
-            stats = data[0]
-            return {
-                "Points Per Game": f"<span style='font-size:22px; color:#E63946; font-weight:bold;'>{stats.get('pts', 'N/A')}</span>",
-                "Rebounds Per Game": f"<span style='font-size:22px; color:#457B9D; font-weight:bold;'>{stats.get('reb', 'N/A')}</span>",
-                "Assists Per Game": f"<span style='font-size:22px; color:#F4A261; font-weight:bold;'>{stats.get('ast', 'N/A')}</span>",
-                "Field Goal %": f"<span style='font-size:22px; color:#2A9D8F; font-weight:bold;'>{round(stats.get('fg_pct', 0) * 100, 1)}%</span>" if stats.get('fg_pct') else "**N/A**",
-                "Minutes Per Game": f"<span style='font-size:22px; color:#1D3557; font-weight:bold;'>{stats.get('min', 'N/A')}</span>",
-            }
-        else:
-            return None
-    
-    st.error(f"❌ API Error: {response.status_code} - {response.text}")
+        stats = response.json().get("data", [])
+        return stats[0] if stats else None
     return None
-
-# ✅ Fetch Last 10 Most Recent Game Logs (FIXED Opponent Names & Order)
-def fetch_recent_player_game_logs(player_id, player_team_id):
-    url = f"{BASE_URL}/stats?player_ids[]={player_id}&per_page=10&sort=game.date&order=desc"
-    response = requests.get(url, headers=HEADERS)
-
-    if response.status_code == 200:
-        data = response.json().get("data", [])
-        game_logs = []
-
-        for game in data:
-            game_info = game.get("game", {})
-            home_team_id = game_info.get("home_team_id")
-            visitor_team_id = game_info.get("visitor_team_id")
-
-            # ✅ FIX: Correct Opponent Name
-            if home_team_id == player_team_id:
-                opponent = game_info.get("visitor_team", {}).get("full_name", "Unknown")
-            else:
-                opponent = game_info.get("home_team", {}).get("full_name", "Unknown")
-
-            # ✅ FIX: Get Correct Dates
-            game_logs.append({
-                "Date": game_info.get("date", "")[:10],  # Extract YYYY-MM-DD
-                "Opponent": opponent,
-                "Points": game.get("pts", 0),
-                "Rebounds": game.get("reb", 0),
-                "Assists": game.get("ast", 0),
-                "Minutes": game.get("min", "N/A"),
-                "FG%": round(game.get("fg_pct", 0) * 100, 1) if game.get("fg_pct") else "N/A"
-            })
-
-        return game_logs  
-
-    st.error(f"❌ API Error: {response.status_code} - {response.text}")
-    return []
 
 # ✅ Streamlit UI
 st.sidebar.title("🏀 Today's NBA Games")
-st.sidebar.write("View today's NBA games, players, and stats.")
-
 games = fetch_games()
+
 game_options = {f"{game['home_team']['full_name']} vs {game['visitor_team']['full_name']}": game for game in games}
 selected_game = st.sidebar.selectbox("Select a Game", list(game_options.keys()))
 
@@ -101,38 +43,35 @@ if selected_game:
     game_data = game_options[selected_game]
     home_team = game_data["home_team"]
     away_team = game_data["visitor_team"]
-    game_time = datetime.strptime(game_data["date"], "%Y-%m-%d").strftime("%B %d, %Y - 7:00 PM ET")
+    game_time = game_data["date"]
 
     st.title("🏀 PropEdge NBA")
-    st.write("View today's NBA games and players.")
-    st.header(f"Players for {home_team['full_name']} vs {away_team['full_name']}")
+    st.subheader(f"Players for {home_team['full_name']} vs {away_team['full_name']}")
     st.markdown(f"### 🕒 Game Time: **{game_time}**")
 
-    # ✅ Fetching Players for Both Teams
     players_home = fetch_active_players(home_team["id"])
     players_away = fetch_active_players(away_team["id"])
+    
     players = players_home + players_away
-
+    
     if players:
-        player_dict = {f"{player['first_name']} {player['last_name']}": (player["id"], player["team"]["id"]) for player in players}
+        player_dict = {f"{player['first_name']} {player['last_name']}": player["id"] for player in players}
         selected_player = st.selectbox("Select a Player", list(player_dict.keys()))
 
         if selected_player:
-            player_id, player_team_id = player_dict[selected_player]
+            player_id = player_dict[selected_player]
             st.write(f"📊 Fetching stats for: **{selected_player} (ID: {player_id})**")
 
-            # ✅ Fetch & Display Season Averages
+            # ✅ Display Season Averages (WORKING)
             season_avg = fetch_player_season_averages(player_id)
             if season_avg:
-                st.subheader(f"📊 **Season Averages for {selected_player}**")
-                season_html = "".join([f"<p style='font-size:20px;'><strong>{key}:</strong> {value}</p>" for key, value in season_avg.items()])
-                st.markdown(season_html, unsafe_allow_html=True)
-
-            # ✅ Fetch & Display Last 10 Games (FIXED Opponent Names & Dates)
-            game_logs = fetch_recent_player_game_logs(player_id, player_team_id)
-            if game_logs:
-                df_logs = pd.DataFrame(game_logs)
-                st.subheader(f"📊 **Last 10 Games for {selected_player}**")
-                st.dataframe(df_logs.style.set_properties(**{'font-size': '18px'}))
+                st.markdown(f"## 📊 **Season Averages for {selected_player}**")
+                st.markdown(f"**Points Per Game:** <span style='color:red; font-size:20px;'>{season_avg['pts']}</span>", unsafe_allow_html=True)
+                st.markdown(f"**Rebounds Per Game:** <span style='color:blue; font-size:20px;'>{season_avg['reb']}</span>", unsafe_allow_html=True)
+                st.markdown(f"**Assists Per Game:** <span style='color:orange; font-size:20px;'>{season_avg['ast']}</span>", unsafe_allow_html=True)
+                st.markdown(f"**Field Goal %:** <span style='color:green; font-size:20px;'>{season_avg['fg_pct']*100:.1f}%</span>", unsafe_allow_html=True)
+                st.markdown(f"**Minutes Per Game:** <span style='font-weight:bold; font-size:20px;'>{season_avg['min']}</span>", unsafe_allow_html=True)
+            else:
+                st.warning("⚠️ No season averages available for this player.")
 
 st.write("Built with ❤️ for NBA fans | Data: balldontlie.io")
